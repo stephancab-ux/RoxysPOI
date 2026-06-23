@@ -4,25 +4,54 @@
 // it (persisted to IndexedDB), and exports it for the agency to commit to GitHub.
 // =============================================================================
 
-import { BASE_URL } from '../config.js';
+import { BASE_URL, SEED_CATEGORIES, isDesktop } from '../config.js';
 import { loadMaster, saveMaster } from './db.js';
 import { normalizeCategory, normalizePOI } from './schema.js';
 import { downloadFile } from '../ui/components.js';
 
 const DEFAULT_EMAIL = 'info@roxystravelplan.com';
 
-function normalizeContent(raw) {
+export function normalizeContent(raw) {
   const r = raw && typeof raw === 'object' ? raw : {};
   const block = (b) => ({ en: (b?.en || '').toString(), fr: (b?.fr || '').toString(), de: (b?.de || '').toString() });
   return { welcome: block(r.welcome), expiry: block(r.expiry), email: (r.email || DEFAULT_EMAIL).toString() };
 }
 
-function normalizeMaster(raw) {
+export function normalizeMaster(raw) {
   return {
     categories: (raw.categories || []).map(normalizeCategory),
     pois: (raw.pois || []).map(normalizePOI).filter(Boolean),
     content: raw.content ? normalizeContent(raw.content) : null, // filled from content.json if absent
   };
+}
+
+/** A fresh starter dataset (default categories, no points) — used by the
+ *  desktop app's "Start a new list" and as a fallback seed. */
+export function seedMaster() {
+  return {
+    categories: SEED_CATEGORIES.map((c) => normalizeCategory({ ...c })),
+    pois: [],
+    content: normalizeContent({}),
+  };
+}
+
+// ---- Unsaved-changes tracking (desktop: the file is the source of truth) -----
+let _dirty = false;
+let _onDirty = null;
+/** Subscribe to dirty-state changes (desktop save indicator). */
+export function onDirtyChange(cb) {
+  _onDirty = cb;
+}
+export function isDirty() {
+  return _dirty;
+}
+function setDirty(v) {
+  _dirty = v;
+  _onDirty?.(v);
+}
+/** Call after a successful file save (desktop) to clear the unsaved flag. */
+export function markSaved() {
+  setDirty(false);
 }
 
 /** The published live texts (data/content.json), or sensible defaults. */
@@ -57,11 +86,23 @@ export async function fetchSeed() {
   } catch {
     /* ignore */
   }
+  // No published seed (the agency list is no longer shipped online) → start from
+  // the built-in default categories so the admin is never empty.
+  if (!m.categories.length) m.categories = seedMaster().categories;
   if (!m.content) m.content = await fetchPublishedContent();
   return m;
 }
 
+/**
+ * Persist the working master. On the web admin this writes IndexedDB. In the
+ * desktop app the FILE is the source of truth and saving is explicit, so we only
+ * flag unsaved changes here (the user clicks Save to write the file).
+ */
 export async function persistMaster(master) {
+  if (isDesktop()) {
+    setDirty(true);
+    return;
+  }
   await saveMaster({ categories: master.categories, pois: master.pois, content: master.content || null });
 }
 

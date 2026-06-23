@@ -193,5 +193,30 @@
   "admin.texts.saved": "Enregistré — publiez le site pour activer.",
 
   "admin.import.merged": "{added} ajoutés · {updated} mis à jour.",
-  "admin.import.categoryColumn": "Si une colonne Catégorie est associée, chaque ligne utilise sa propre catégorie (les nouvelles sont créées)."
+  "admin.import.categoryColumn": "Si une colonne Catégorie est associée, chaque ligne utilise sa propre catégorie (les nouvelles sont créées).",
+
+  "admin.desktop.save": "Enregistrer",
+  "admin.desktop.unsaved": "● Modifications non enregistrées",
+  "admin.desktop.savedAt": "Enregistré {time}",
+  "admin.desktop.saved": "Enregistré dans votre fichier.",
+  "admin.desktop.saveError": "Impossible d'écrire le fichier. Vérifiez l'emplacement et que votre lecteur est disponible.",
+  "admin.desktop.readError": "Impossible de lire ce fichier. Assurez-vous qu'il s'agit d'une liste maître Roxys.",
+  "admin.desktop.reloadConfirm": "Recharger depuis le disque et perdre vos modifications non enregistrées ?",
+  "admin.desktop.reloaded": "Rechargé depuis le disque.",
+  "admin.desktop.welcomeTitle": "Bienvenue dans Roxys Admin",
+  "admin.desktop.welcomeHint": "Conservez votre liste maître dans un dossier Google Drive ou OneDrive pour qu'elle se synchronise entre vos ordinateurs. Ouvrez votre liste existante ou créez-en une nouvelle.",
+  "admin.desktop.openExisting": "Ouvrir une liste existante…",
+  "admin.desktop.startNew": "Créer une nouvelle liste",
+  "admin.desktop.unsavedTitle": "Modifications non enregistrées",
+  "admin.desktop.unsavedBody": "Vous avez des modifications non enregistrées. Les enregistrer avant de fermer ?",
+  "admin.desktop.discard": "Fermer sans enregistrer",
+  "admin.desktop.saveClose": "Enregistrer et fermer",
+  "admin.desktop.copySaved": "Copie enregistrée.",
+  "admin.desktop.hint": "Votre liste maître est un fichier sur cet ordinateur. Conservez-le dans un dossier Google Drive ou OneDrive et il se synchronise avec votre autre ordinateur. Modifiez, puis Enregistrez. Attendez le symbole « synchronisé » du lecteur avant de changer d'ordinateur.",
+  "admin.desktop.pathPlaceholder": "…/Google Drive/Roxys/master.json",
+  "admin.desktop.fileLocation": "Emplacement du fichier maître",
+  "admin.desktop.browse": "Parcourir…",
+  "admin.desktop.reload": "Recharger depuis le disque",
+  "admin.desktop.openOther": "Ouvrir un autre fichier…",
+  "admin.desktop.exportCopy": "Exporter une copie…"
 }

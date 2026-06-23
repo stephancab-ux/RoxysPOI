@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capabilities for the Roxys Admin window: file dialogs + a remembered-settings store. File reads/writes use the app's own commands (no fs-plugin scope needed).",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-destroy",
+    "core:window:allow-close",
+    "dialog:default",
+    "store:default"
+  ]
+}

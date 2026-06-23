@@ -1,0 +1,59 @@
+name: Build desktop installers
+
+# Builds the "Roxys Admin" desktop app for macOS and Windows and attaches the
+# installers to a GitHub Release. Trigger it by pushing a version tag (e.g.
+# v1.0.0) or by running it manually from the Actions tab (workflow_dispatch).
+# macOS/Windows installers must be built on their own OS, so this uses a matrix
+# of per-OS runners.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: '--target universal-apple-darwin'
+          - platform: windows-latest
+            args: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build app and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('desktop-v{0}', github.run_number) }}
+          releaseName: "Roxys Admin ${{ github.ref_type == 'tag' && github.ref_name || '(manual build)' }}"
+          releaseBody: "Download the installer for your computer — macOS (.dmg) or Windows (.exe). These apps are unsigned: the first time you open one, follow docs/admin-desktop.md to get past the “unidentified developer / unknown publisher” warning."
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}

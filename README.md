@@ -4,17 +4,22 @@ An installable, **offline-capable travel-map PWA** for the travel agency *Roxys
 Travel Plan*. The agency curates points of interest (beaches, food, hikes,
 attractions…) and shares **scoped subsets** with clients.
 
-- **Client viewer** (`/`): import the JSON travel file the agency emailed, then
-  browse those places on a Leaflet map with numbered clusters, category/country
-  filters, search, "open in Google Maps" links, a GPS "you are here" dot, and
-  offline maps. Locks itself after the travel dates.
-- **Admin** (`/admin.html`): import POIs from CSV, auto-tag each point's country
-  from its coordinates, manage categories (emoji + colour, applied globally),
-  edit points on a table + map, and generate per-client travel files.
+- **Client viewer** (the public site, on GitHub Pages): import the JSON travel
+  file the agency emailed, then browse those places on a Leaflet map with
+  numbered clusters, category/country filters, search, "open in Google Maps"
+  links, a GPS "you are here" dot, and offline maps. Locks itself after the
+  travel dates.
+- **Admin** (a **local desktop app** — "Roxys Admin", Windows + macOS): import
+  POIs from CSV, auto-tag each point's country from its coordinates, manage
+  categories (emoji + colour, applied globally), edit points on a table + map,
+  and generate per-client travel files. The agency's master list is a **private
+  file on the owner's computer** (kept in a Google Drive / OneDrive folder so it
+  syncs between machines) and is **never published online**. See
+  [docs/admin-desktop.md](docs/admin-desktop.md).
 
-No backend. Everything is static and hostable on **GitHub Pages**; data lives
-either in `data/master.json` (the agency master) or on the client's device
-(their imported subset, in IndexedDB).
+No backend. The public site is **client-only** and hostable on **GitHub Pages**;
+the agency's points live solely in the desktop app's local file, and each
+client's emailed subset lives on their device (in IndexedDB).
 
 The default theme is dark with a gold accent (`#B8902F`); a light theme is in
 Settings. UI is available in **English, French and German**.
@@ -50,6 +55,35 @@ npm run preview  # serve the production build locally
 The app is served under the base path **`/RoxysPOI/`** (matches the GitHub Pages
 project URL). Change it in one place — `base` in `vite.config.js` — if your repo
 name differs.
+
+> `npm run build` builds **only the client viewer** for the public site. The
+> admin is built and shipped as a desktop app instead (below).
+
+---
+
+## Desktop admin app (Roxys Admin)
+
+The admin runs as a local [Tauri](https://tauri.app/) desktop app so the agency's
+master list never goes online. The master list is a JSON file the owner keeps in
+a Google Drive / OneDrive folder, which carries it between their computers.
+
+```bash
+npm install
+npm run tauri dev      # run the desktop admin locally (needs Rust + OS webview libs)
+npm run tauri build    # build an installer for the current OS
+npm run build:desktop  # just the admin front-end → dist-desktop/ (Tauri bundles this)
+```
+
+**Installers for end users** are built by `.github/workflows/release.yml`: push a
+tag (e.g. `git tag v1.0.0 && git push --tags`) or run the workflow manually, and
+GitHub Actions builds a macOS `.dmg` and a Windows `.exe`, attaching them to a
+Release. The apps are **unsigned** (free) — see
+[docs/admin-desktop.md](docs/admin-desktop.md) for install + first-run steps and
+how the Drive-synced master file works.
+
+Native file reads/writes are done by small Rust commands in
+`src-tauri/src/main.rs`; the JS side lives in `src/data/desktopStore.js`, and
+`config.isDesktop()` branches desktop vs. web behaviour.
 
 ---
 

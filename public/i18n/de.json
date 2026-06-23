@@ -193,5 +193,30 @@
   "admin.texts.saved": "Gespeichert — Seite veröffentlichen, um live zu schalten.",
 
   "admin.import.merged": "{added} hinzugefügt · {updated} aktualisiert.",
-  "admin.import.categoryColumn": "Wenn eine Kategorie-Spalte zugeordnet ist, nutzt jede Zeile ihre eigene Kategorie (neue werden angelegt)."
+  "admin.import.categoryColumn": "Wenn eine Kategorie-Spalte zugeordnet ist, nutzt jede Zeile ihre eigene Kategorie (neue werden angelegt).",
+
+  "admin.desktop.save": "Speichern",
+  "admin.desktop.unsaved": "● Nicht gespeicherte Änderungen",
+  "admin.desktop.savedAt": "Gespeichert {time}",
+  "admin.desktop.saved": "In Ihrer Datei gespeichert.",
+  "admin.desktop.saveError": "Datei konnte nicht geschrieben werden. Prüfen Sie den Speicherort und ob Ihr Laufwerk verfügbar ist.",
+  "admin.desktop.readError": "Diese Datei konnte nicht gelesen werden. Stellen Sie sicher, dass es eine Roxys-Stammliste ist.",
+  "admin.desktop.reloadConfirm": "Von der Festplatte neu laden und nicht gespeicherte Änderungen verwerfen?",
+  "admin.desktop.reloaded": "Von der Festplatte neu geladen.",
+  "admin.desktop.welcomeTitle": "Willkommen bei Roxys Admin",
+  "admin.desktop.welcomeHint": "Bewahren Sie Ihre Stammliste in einem Google-Drive- oder OneDrive-Ordner auf, damit sie zwischen Ihren Computern synchronisiert wird. Öffnen Sie Ihre vorhandene Liste oder beginnen Sie eine neue.",
+  "admin.desktop.openExisting": "Vorhandene Liste öffnen…",
+  "admin.desktop.startNew": "Neue Liste beginnen",
+  "admin.desktop.unsavedTitle": "Nicht gespeicherte Änderungen",
+  "admin.desktop.unsavedBody": "Sie haben nicht gespeicherte Änderungen. Vor dem Schließen speichern?",
+  "admin.desktop.discard": "Ohne Speichern schließen",
+  "admin.desktop.saveClose": "Speichern & schließen",
+  "admin.desktop.copySaved": "Kopie gespeichert.",
+  "admin.desktop.hint": "Ihre Stammliste ist eine Datei auf diesem Computer. Bewahren Sie sie in einem Google-Drive- oder OneDrive-Ordner auf, dann wird sie mit Ihrem anderen Computer synchronisiert. Bearbeiten, dann Speichern. Warten Sie auf das „synchronisiert“-Häkchen des Laufwerks, bevor Sie den Computer wechseln.",
+  "admin.desktop.pathPlaceholder": "…/Google Drive/Roxys/master.json",
+  "admin.desktop.fileLocation": "Speicherort der Stammdatei",
+  "admin.desktop.browse": "Durchsuchen…",
+  "admin.desktop.reload": "Von Festplatte neu laden",
+  "admin.desktop.openOther": "Andere Datei öffnen…",
+  "admin.desktop.exportCopy": "Kopie exportieren…"
 }

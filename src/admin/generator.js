@@ -6,6 +6,7 @@
 
 import { el, mount, downloadFile, toast, openModal } from '../ui/components.js';
 import { t } from '../ui/i18n.js';
+import { CLIENT_APP_URL } from '../config.js';
 import { hasCoords, countriesOf } from '../data/schema.js';
 import { bufferedBbox, formatBbox } from '../geo/bbox.js';
 import { packFileName } from '../offline/packs.js';
@@ -92,8 +93,8 @@ export function renderGenerator(container, { master }) {
   function copyIframeEmbed() {
     const f = buildFile();
     if (!f) return;
-    const appUrl = new URL(import.meta.env.BASE_URL, location.origin).href;
-    showEmbed(t('admin.gen.iframeTitle'), buildIframeEmbed(f, appUrl));
+    // Always point travelers at the hosted client viewer (the admin is local-only).
+    showEmbed(t('admin.gen.iframeTitle'), buildIframeEmbed(f, CLIENT_APP_URL));
   }
   function downloadKmlFile() {
     const f = buildFile();

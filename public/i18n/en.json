@@ -193,5 +193,30 @@
   "admin.texts.saved": "Saved — publish the site to make it live.",
 
   "admin.import.merged": "{added} added · {updated} updated.",
-  "admin.import.categoryColumn": "If a Category column is mapped, each row uses its own category (new ones are created)."
+  "admin.import.categoryColumn": "If a Category column is mapped, each row uses its own category (new ones are created).",
+
+  "admin.desktop.save": "Save",
+  "admin.desktop.unsaved": "● Unsaved changes",
+  "admin.desktop.savedAt": "Saved {time}",
+  "admin.desktop.saved": "Saved to your file.",
+  "admin.desktop.saveError": "Could not write the file. Check the location and that your drive is available.",
+  "admin.desktop.readError": "Could not read that file. Make sure it's a Roxys master list.",
+  "admin.desktop.reloadConfirm": "Reload from disk and lose your unsaved changes?",
+  "admin.desktop.reloaded": "Reloaded from disk.",
+  "admin.desktop.welcomeTitle": "Welcome to Roxys Admin",
+  "admin.desktop.welcomeHint": "Keep your master list in a Google Drive or OneDrive folder so it syncs between your computers. Open your existing list, or start a new one.",
+  "admin.desktop.openExisting": "Open existing list…",
+  "admin.desktop.startNew": "Start a new list",
+  "admin.desktop.unsavedTitle": "Unsaved changes",
+  "admin.desktop.unsavedBody": "You have unsaved changes. Save them before closing?",
+  "admin.desktop.discard": "Close without saving",
+  "admin.desktop.saveClose": "Save & close",
+  "admin.desktop.copySaved": "Copy saved.",
+  "admin.desktop.hint": "Your master list is a file on this computer. Keep it in a Google Drive or OneDrive folder and it syncs to your other computer. Edit, then Save. Wait for the drive's “synced” check before switching computers.",
+  "admin.desktop.pathPlaceholder": "…/Google Drive/Roxys/master.json",
+  "admin.desktop.fileLocation": "Master file location",
+  "admin.desktop.browse": "Browse…",
+  "admin.desktop.reload": "Reload from disk",
+  "admin.desktop.openOther": "Open another file…",
+  "admin.desktop.exportCopy": "Export a copy…"
 }

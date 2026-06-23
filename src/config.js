@@ -6,6 +6,16 @@
 /** Path prefix the app is served under (mirrors `base` in vite.config.js). */
 export const BASE_URL = import.meta.env.BASE_URL;
 
+/**
+ * Public URL of the hosted CLIENT viewer (GitHub Pages). The admin is local-only
+ * now, so generated embed/iframe codes must point travelers at THIS live app —
+ * not at the desktop app's local origin.
+ */
+export const CLIENT_APP_URL = 'https://stephancab-ux.github.io/RoxysPOI/';
+
+/** True when running inside the Tauri desktop shell (admin desktop app). */
+export const isDesktop = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
 /** Brand identity. */
 export const BRAND = {
   name: 'Roxys Travel Plan',
