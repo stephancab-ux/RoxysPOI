@@ -1,6 +1,8 @@
 // =============================================================================
 // Manage POIs: sortable/filterable table AND a map view, with add/edit/delete,
 // bulk-delete (checkboxes), CSV export, and Google-link auto-fill on add.
+// The table's data columns (Name/Category/Country/Coordinates/Notes) can be
+// drag-reordered and edge-resized; the order/widths persist in localStorage.
 // =============================================================================
 
 import L from 'leaflet';
@@ -21,6 +23,57 @@ export function renderPoiTable(container, { master, onChange }) {
   const catById = () => new Map(master.categories.map((c) => [c.id, c]));
   const selected = new Set(); // POI ids selected for bulk delete (persists across re-renders)
   let deleteBtn = null;
+
+  // ---- Column model ----------------------------------------------------------
+  // The checkbox (pinned first) and Actions (pinned last) columns are fixed.
+  // These DATA columns are reorderable + resizable; cellFn(p, cats) builds a cell.
+  const DATA_COLUMNS = [
+    { key: 'name', defaultWidth: 200, cellFn: (p) => p.name },
+    {
+      key: 'category',
+      defaultWidth: 160,
+      cellFn: (p, cats) => {
+        const c = cats.get(p.categoryId);
+        return c ? el('span', { class: 'badge', style: { background: c.color } }, [`${c.emoji} ${c.name}`]) : '—';
+      },
+    },
+    { key: 'country', defaultWidth: 140, cellFn: (p) => p.country || '—' },
+    {
+      key: 'coords',
+      defaultWidth: 150,
+      cellFn: (p) =>
+        hasCoords(p) ? `${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}` : el('span', { class: 'tag-missing', text: t('admin.pois.missing') }),
+    },
+    { key: 'note', defaultWidth: 280, cellFn: (p) => p.note || '—' },
+  ];
+  const COL_BY_KEY = new Map(DATA_COLUMNS.map((c) => [c.key, c]));
+  const DEFAULT_ORDER = DATA_COLUMNS.map((c) => c.key);
+  const colLabel = (key) => t(`admin.pois.col.${key}`);
+
+  // Per-user column order/widths (UI preference → localStorage, not the dataset).
+  const LS_ORDER = 'roxys.poiCols.order';
+  const LS_WIDTH = 'roxys.poiCols.width';
+  function loadColOrder() {
+    let stored = [];
+    try { stored = JSON.parse(localStorage.getItem(LS_ORDER)) || []; } catch { /* ignore */ }
+    const valid = stored.filter((k) => COL_BY_KEY.has(k)); // drop removed/renamed cols
+    const missing = DEFAULT_ORDER.filter((k) => !valid.includes(k)); // append new cols
+    return [...valid, ...missing];
+  }
+  function loadColWidths() {
+    try { return JSON.parse(localStorage.getItem(LS_WIDTH)) || {}; } catch { return {}; }
+  }
+  function saveColOrder(order) { localStorage.setItem(LS_ORDER, JSON.stringify(order)); }
+  function saveColWidth(key, px) {
+    const m = loadColWidths();
+    m[key] = Math.round(px);
+    localStorage.setItem(LS_WIDTH, JSON.stringify(m));
+  }
+  function resetCols() {
+    localStorage.removeItem(LS_ORDER);
+    localStorage.removeItem(LS_WIDTH);
+    render();
+  }
 
   function filtered() {
     const q = state.q.trim().toLowerCase();
@@ -189,11 +242,17 @@ export function renderPoiTable(container, { master, onChange }) {
 
   // ---- Table view ------------------------------------------------------------
   function buildTable() {
-    const map = catById();
+    const cats = catById();
     const rows = sorted(filtered());
     const capped = rows.slice(0, 1000);
     const allIds = rows.map((p) => p.id);
     const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
+
+    const order = loadColOrder();
+    const widths = loadColWidths();
+    const cols = order.map((k) => COL_BY_KEY.get(k));
+    let dragKey = null; // key being dragged
+    let didDrag = false; // suppress the click-to-sort that may follow a drop
 
     const headChk = el('input', {
       type: 'checkbox',
@@ -206,38 +265,87 @@ export function renderPoiTable(container, { master, onChange }) {
       },
     });
 
-    const head = (key, label) =>
-      el(
+    // <colgroup> + table-layout:fixed make the column widths authoritative (so
+    // cells truncate to width). Actions is width-less so it absorbs any slack,
+    // keeping the data columns pixel-exact for clean resizing.
+    const colEls = cols.map((c) => el('col', { 'data-col': c.key, style: { width: (widths[c.key] ?? c.defaultWidth) + 'px' } }));
+    const colgroup = el('colgroup', {}, [el('col', { style: { width: '34px' } }), ...colEls, el('col')]);
+
+    // One data-column header: click = sort, drag = reorder, edge handle = resize.
+    const buildDataHeader = (c, colEl) => {
+      const arrow = state.sortKey === c.key ? (state.sortDir === 1 ? ' ▲' : ' ▼') : '';
+      const th = el(
         'th',
         {
+          title: colLabel(c.key),
           onclick: () => {
-            if (state.sortKey === key) state.sortDir *= -1;
-            else {
-              state.sortKey = key;
-              state.sortDir = 1;
-            }
+            if (didDrag) { didDrag = false; return; } // a drag, not a sort click
+            if (state.sortKey === c.key) state.sortDir *= -1;
+            else { state.sortKey = c.key; state.sortDir = 1; }
             render();
           },
+          ondragstart: (e) => {
+            dragKey = c.key;
+            didDrag = true;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', c.key);
+          },
+          ondragover: (e) => {
+            if (dragKey && dragKey !== c.key) { e.preventDefault(); th.classList.add('col-drop'); }
+          },
+          ondragleave: () => th.classList.remove('col-drop'),
+          ondrop: (e) => {
+            e.preventDefault();
+            th.classList.remove('col-drop');
+            if (!dragKey || dragKey === c.key) return;
+            const next = order.filter((k) => k !== dragKey);
+            next.splice(next.indexOf(c.key), 0, dragKey); // insert before the drop target
+            saveColOrder(next);
+            render();
+          },
+          ondragend: () => { dragKey = null; },
         },
-        [label + (state.sortKey === key ? (state.sortDir === 1 ? ' ▲' : ' ▼') : '')]
+        [colLabel(c.key) + arrow]
       );
+      th.draggable = true; // set via property: the `draggable=""` attribute means "auto"
 
-    const table = el('table', { class: 'data' }, [
+      // Resize handle on the right edge. stopPropagation keeps it off sort/drag;
+      // disabling th.draggable on hover stops the edge from starting a column drag.
+      const handle = el('span', { class: 'col-resize', 'aria-hidden': 'true' });
+      handle.addEventListener('mouseenter', () => { th.draggable = false; });
+      handle.addEventListener('mouseleave', () => { th.draggable = true; });
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.clientX;
+        const startW = th.getBoundingClientRect().width; // <col> has no box; measure the th
+        const apply = (ev) => Math.max(60, startW + (ev.clientX - startX));
+        const onMove = (ev) => { colEl.style.width = apply(ev) + 'px'; };
+        const onUp = (ev) => {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          saveColWidth(c.key, apply(ev));
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+      th.append(handle);
+      return th;
+    };
+
+    const table = el('table', { class: 'data poi-table' }, [
+      colgroup,
       el('thead', {}, [
         el('tr', {}, [
-          el('th', { style: { cursor: 'default', width: '34px' } }, [headChk]),
-          head('name', t('admin.pois.col.name')),
-          head('category', t('admin.pois.col.category')),
-          head('country', t('admin.pois.col.country')),
-          head('coords', t('admin.pois.col.coords')),
-          el('th', { text: t('admin.pois.col.actions') }),
+          el('th', { class: 'col-fixed', style: { cursor: 'default' } }, [headChk]),
+          ...cols.map((c, i) => buildDataHeader(c, colEls[i])),
+          el('th', { class: 'col-fixed', text: t('admin.pois.col.actions') }),
         ]),
       ]),
       el(
         'tbody',
         {},
         capped.map((p) => {
-          const c = map.get(p.categoryId);
           const chk = el('input', {
             type: 'checkbox',
             checked: selected.has(p.id),
@@ -248,13 +356,13 @@ export function renderPoiTable(container, { master, onChange }) {
               headChk.checked = allIds.every((id) => selected.has(id));
             },
           });
+          const dataCells = cols.map((c) =>
+            el('td', c.key === 'note' ? { class: 'cell-note', title: p.note || '' } : {}, [c.cellFn(p, cats)])
+          );
           return el('tr', {}, [
-            el('td', {}, [chk]),
-            el('td', { text: p.name }),
-            el('td', {}, [c ? el('span', { class: 'badge', style: { background: c.color } }, [`${c.emoji} ${c.name}`]) : '—']),
-            el('td', { text: p.country || '—' }),
-            el('td', {}, [hasCoords(p) ? `${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}` : el('span', { class: 'tag-missing', text: t('admin.pois.missing') })]),
-            el('td', {}, [
+            el('td', { class: 'col-fixed' }, [chk]),
+            ...dataCells,
+            el('td', { class: 'col-fixed' }, [
               el('button', { class: 'btn btn--sm', text: t('common.edit'), onclick: () => openForm(p) }),
               ' ',
               el('button', { class: 'btn btn--sm btn--danger', text: t('common.delete'), onclick: () => remove(p) }),
@@ -271,6 +379,7 @@ export function renderPoiTable(container, { master, onChange }) {
   // ---- Map view --------------------------------------------------------------
   let mapInstance = null;
   let mapResizeObserver = null;
+  let savedView = null; // {center, zoom} remembered across rebuilds (session-only)
 
   // Admin popup: name + category + Edit / Delete (delete removes from the DB).
   function adminPopup(p, c) {
@@ -285,12 +394,21 @@ export function renderPoiTable(container, { master, onChange }) {
     ].filter(Boolean));
   }
 
+  // Tear down the map, remembering its viewport so the next build can restore it.
+  // This is why editing/deleting/selecting a point no longer resets the zoom.
+  function teardownMap() {
+    if (mapInstance) savedView = { center: mapInstance.getCenter(), zoom: mapInstance.getZoom() };
+    if (mapResizeObserver) { mapResizeObserver.disconnect(); mapResizeObserver = null; }
+    if (mapInstance) { mapInstance.stop(); mapInstance.remove(); mapInstance = null; } // stop() halts pending animations before teardown
+  }
+
   function buildMap() {
     const div = el('div', { class: 'admin-map', id: 'admin-map' });
     setTimeout(() => {
-      mapResizeObserver?.disconnect();
-      mapInstance?.remove();
-      mapInstance = L.map(div, { minZoom: 1 }).setView([-8.4, 115.2], 5);
+      teardownMap();
+      mapInstance = L.map(div, { minZoom: 1, maxZoom: 19 }); // explicit maxZoom so markercluster has a finite zoom
+      if (savedView) mapInstance.setView(savedView.center, savedView.zoom);
+      else mapInstance.setView([-8.4, 115.2], 5);
       createOnlineLayer().addTo(mapInstance); // English (OpenFreeMap) base, same as the client
       const cats = catById();
       const cluster = createClusterGroup();
@@ -302,9 +420,13 @@ export function renderPoiTable(container, { master, onChange }) {
       });
       cluster.addLayers(markers);
       mapInstance.addLayer(cluster);
-      if (pts.length) mapInstance.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lng])).pad(0.15));
-      // repaint when the user drag-resizes the container (avoids grey tiles)
-      mapResizeObserver = new ResizeObserver(() => mapInstance && mapInstance.invalidateSize());
+      // Only auto-fit on the FIRST build; afterwards keep the user's viewport.
+      if (!savedView && pts.length) mapInstance.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lng])).pad(0.15));
+      // repaint when the user drag-resizes the container (avoids grey tiles).
+      // Guard against a just-detached container (rebuild race) to avoid errors.
+      mapResizeObserver = new ResizeObserver(() => {
+        if (mapInstance && mapInstance.getContainer().isConnected) mapInstance.invalidateSize();
+      });
       mapResizeObserver.observe(div);
     }, 0);
     return div;
@@ -312,14 +434,7 @@ export function renderPoiTable(container, { master, onChange }) {
 
   // ---- Render shell ----------------------------------------------------------
   function render() {
-    if (mapResizeObserver) {
-      mapResizeObserver.disconnect();
-      mapResizeObserver = null;
-    }
-    if (mapInstance) {
-      mapInstance.remove();
-      mapInstance = null;
-    }
+    teardownMap();
     const catSel = el('select', { onchange: (e) => ((state.cat = e.target.value), render()) }, [
       el('option', { value: '' }, [t('admin.pois.filterCat')]),
       ...master.categories.map((c) => el('option', { value: c.id, selected: c.id === state.cat ? '' : null }, [`${c.emoji} ${c.name}`])),
@@ -345,6 +460,7 @@ export function renderPoiTable(container, { master, onChange }) {
 
     deleteBtn = el('button', { class: 'btn btn--danger', onclick: deleteSelected });
     const exportBtn = el('button', { class: 'btn', text: t('admin.pois.export'), onclick: exportCsv });
+    const resetColsBtn = el('button', { class: 'btn btn--sm btn--ghost', text: t('admin.pois.resetColumns'), onclick: resetCols });
 
     const body = el('div', {}, [
       master.pois.length === 0 ? el('p', { class: 'muted', text: t('admin.pois.empty') }) : state.view === 'table' ? buildTable() : buildMap(),
@@ -360,6 +476,7 @@ export function renderPoiTable(container, { master, onChange }) {
         catSel,
         countrySel,
         el('div', { class: 'appbar__spacer' }),
+        state.view === 'table' ? resetColsBtn : null,
         exportBtn,
         viewToggle,
       ]),

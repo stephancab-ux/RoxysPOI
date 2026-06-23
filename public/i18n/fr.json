@@ -101,6 +101,7 @@
   "admin.pois.col.category": "Catégorie",
   "admin.pois.col.country": "Pays",
   "admin.pois.col.coords": "Coordonnées",
+  "admin.pois.col.note": "Notes",
   "admin.pois.col.actions": "Actions",
   "admin.pois.missing": "manquant",
   "admin.pois.empty": "Aucun lieu pour l'instant. Importez un CSV pour commencer.",
@@ -186,6 +187,7 @@
   "admin.poi.autofillNone": "Impossible de lire un nom ou des coordonnées depuis ce lien.",
 
   "admin.pois.export": "Exporter CSV",
+  "admin.pois.resetColumns": "Réinitialiser les colonnes",
   "admin.pois.deleteSelected": "Supprimer la sélection ({n})",
   "admin.pois.deleteSelectedConfirm": "Supprimer {n} lieux sélectionnés ?",
   "admin.pois.deleted": "{n} supprimés",

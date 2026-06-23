@@ -575,6 +575,42 @@ table.data tbody tr:hover {
   font-weight: 700;
 }
 
+/* POI table: fixed layout makes column widths authoritative (so columns can be
+   drag-resized and cells truncate to their width); data columns drag-reorder. */
+table.data.poi-table {
+  table-layout: fixed;
+}
+table.data.poi-table th,
+table.data.poi-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The checkbox + Actions columns must never clip their controls. */
+table.data.poi-table th.col-fixed,
+table.data.poi-table td.col-fixed {
+  overflow: visible;
+  text-overflow: clip;
+}
+/* Resize handle on each data header's right edge. The th is sticky → it is the
+   containing block for this absolutely-positioned handle. */
+table.data.poi-table th .col-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+}
+table.data.poi-table th .col-resize:hover {
+  background: var(--gold, #b8902f);
+  opacity: 0.6;
+}
+/* Drop indicator shown on the column a dragged header will land before. */
+table.data.poi-table th.col-drop {
+  box-shadow: inset 3px 0 0 var(--gold, #b8902f);
+}
+
 /* ---- Category editor cards -------------------------------------------------- */
 .cat-card {
   display: flex;

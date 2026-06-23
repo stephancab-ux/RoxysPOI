@@ -101,6 +101,7 @@
   "admin.pois.col.category": "Category",
   "admin.pois.col.country": "Country",
   "admin.pois.col.coords": "Coordinates",
+  "admin.pois.col.note": "Notes",
   "admin.pois.col.actions": "Actions",
   "admin.pois.missing": "missing",
   "admin.pois.empty": "No points yet. Import a CSV to get started.",
@@ -186,6 +187,7 @@
   "admin.poi.autofillNone": "Couldn't read a name or coordinates from that link.",
 
   "admin.pois.export": "Export CSV",
+  "admin.pois.resetColumns": "Reset columns",
   "admin.pois.deleteSelected": "Delete selected ({n})",
   "admin.pois.deleteSelectedConfirm": "Delete {n} selected points?",
   "admin.pois.deleted": "{n} deleted",
