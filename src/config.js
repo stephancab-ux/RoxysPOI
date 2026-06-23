@@ -48,8 +48,9 @@ export const MAP = {
   // agency's hub in the reference material).
   defaultCenter: [-8.4095, 115.1889],
   defaultZoom: 9,
-  // Clustering behaviour.
-  clusterMaxRadius: 60,
+  // Clustering behaviour: radius ≈ one pin's footprint (iconSize 32 + border),
+  // so pins only merge when their bodies would actually touch/overlap.
+  clusterMaxRadius: 32,
 };
 
 // -----------------------------------------------------------------------------

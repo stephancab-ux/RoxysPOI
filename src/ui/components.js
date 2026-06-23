@@ -123,12 +123,13 @@ export function confirmDialog(message, { okLabel, danger } = {}) {
 }
 
 // ---- Drawer (slide-in panel from the right) ----------------------------------
-export function openDrawer({ title, body }) {
+export function openDrawer({ title, body, onClose }) {
   const backdrop = el('div', { class: 'drawer-backdrop' });
   const close = () => {
     backdrop.remove();
     drawer.remove();
     document.removeEventListener('keydown', onKey);
+    onClose?.();
   };
   const onKey = (e) => e.key === 'Escape' && close();
   const drawer = el('aside', { class: 'drawer', role: 'dialog', 'aria-modal': 'true' }, [

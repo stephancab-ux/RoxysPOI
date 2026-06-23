@@ -28,15 +28,14 @@ fn write_text(path: String, contents: String) -> Result<(), String> {
     fs::write(&path, contents).map_err(|e| e.to_string())
 }
 
-/// Write a dated backup next to the master file, in a `backups/` subfolder.
-/// `stamp` is a caller-supplied YYYYMMDD-HHMMSS string. Returns the backup path.
+/// Write a dated backup snapshot into the user-chosen backup `folder` (created
+/// if needed). `stamp` is a caller-supplied YYYYMMDD-HHMMSS string. Returns the
+/// backup path.
 #[tauri::command]
-fn write_backup(master_path: String, contents: String, stamp: String) -> Result<String, String> {
-    let p = Path::new(&master_path);
-    let dir = p.parent().unwrap_or_else(|| Path::new("."));
-    let backups = dir.join("backups");
-    fs::create_dir_all(&backups).map_err(|e| e.to_string())?;
-    let dest = backups.join(format!("roxys-master-{}.json", stamp));
+fn write_backup(folder: String, contents: String, stamp: String) -> Result<String, String> {
+    let dir = Path::new(&folder);
+    fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let dest = dir.join(format!("roxys-master-{}.json", stamp));
     fs::write(&dest, &contents).map_err(|e| e.to_string())?;
     Ok(dest.to_string_lossy().to_string())
 }

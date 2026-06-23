@@ -180,8 +180,9 @@ label {
 /* ---- Search box ------------------------------------------------------------- */
 .search {
   position: relative;
-  flex: 1;
-  max-width: 460px;
+  /* Fill all the room between the logo and the ☰/⚙ buttons (no fixed cap). */
+  flex: 1 1 auto;
+  max-width: none;
 }
 .search input {
   background: var(--surface);

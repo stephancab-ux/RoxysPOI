@@ -145,8 +145,9 @@ function renderMap(dataset, itinerary) {
 
   const appbar = el('div', { class: 'appbar' }, [
     logo,
-    hasPlaces ? search : null,
-    el('div', { class: 'appbar__spacer' }),
+    // The search (flex:1) fills the room up to the buttons; with no search,
+    // a spacer pushes the gear to the right instead.
+    hasPlaces ? search : el('div', { class: 'appbar__spacer' }),
     hasPlaces ? filtersBtn : null,
     settingsBtn,
   ].filter(Boolean));
@@ -258,70 +259,78 @@ function renderMap(dataset, itinerary) {
 // ---- Settings drawer ---------------------------------------------------------
 async function openSettings(dataset, itinerary, baseLayers) {
   const hasPlaces = !!(dataset && Array.isArray(dataset.points));
-  const body = el('div', {});
+  const bodyWrap = el('div', {});
 
-  // Theme
-  const themeSeg = el('div', { class: 'segmented' }, [
-    themeBtn('dark', 'settings.theme.dark'),
-    themeBtn('light', 'settings.theme.light'),
-  ]);
-  function themeBtn(value, key) {
-    return el('button', {
-      'data-i18n': key,
-      'aria-pressed': getTheme() === value ? 'true' : 'false',
-      onclick: () => {
-        setTheme(value);
-        [...themeSeg.children].forEach((b, i) => b.setAttribute('aria-pressed', (i === 0 ? 'dark' : 'light') === value ? 'true' : 'false'));
-      },
-    });
-  }
+  // Build (or rebuild) the whole drawer body. Rebuilding on a language change
+  // re-resolves every label and the disclaimer text so they switch live.
+  async function renderBody() {
+    const body = el('div', {});
 
-  // Language
-  const langSeg = el(
-    'div',
-    { class: 'segmented' },
-    LANGUAGES.map((l) =>
-      el('button', {
-        text: l.label,
-        'aria-pressed': getLang() === l.code ? 'true' : 'false',
-        onclick: async () => {
-          await setLang(l.code);
-          [...langSeg.children].forEach((b, i) => b.setAttribute('aria-pressed', LANGUAGES[i].code === l.code ? 'true' : 'false'));
+    // Theme
+    const themeSeg = el('div', { class: 'segmented' }, [themeBtn('dark', 'settings.theme.dark'), themeBtn('light', 'settings.theme.light')]);
+    function themeBtn(value, key) {
+      return el('button', {
+        'data-i18n': key,
+        'aria-pressed': getTheme() === value ? 'true' : 'false',
+        onclick: () => {
+          setTheme(value);
+          [...themeSeg.children].forEach((b, i) => b.setAttribute('aria-pressed', (i === 0 ? 'dark' : 'light') === value ? 'true' : 'false'));
         },
-      })
-    )
-  );
+      });
+    }
 
-  body.append(
-    el('div', { class: 'section' }, [el('h3', { 'data-i18n': 'settings.theme' }), themeSeg]),
-    el('div', { class: 'section' }, [el('h3', { 'data-i18n': 'settings.language' }), langSeg])
-  );
+    // Language — a click re-renders this body in the new language (below).
+    const langSeg = el(
+      'div',
+      { class: 'segmented' },
+      LANGUAGES.map((l) =>
+        el('button', { text: l.label, 'aria-pressed': getLang() === l.code ? 'true' : 'false', onclick: () => setLang(l.code) })
+      )
+    );
 
-  // Offline maps
-  body.append(await buildOfflineSection(dataset || { points: [], client: '' }, baseLayers));
+    body.append(
+      el('div', { class: 'section' }, [el('h3', { 'data-i18n': 'settings.theme' }), themeSeg]),
+      el('div', { class: 'section' }, [el('h3', { 'data-i18n': 'settings.language' }), langSeg])
+    );
 
-  // Your travel plan — one document now (recommendation list and/or route).
-  // Importing a new file REPLACES whatever is loaded (see importTravelFile).
-  const planRows = [el('h3', { 'data-i18n': 'settings.plan' })];
-  if (hasPlaces) {
-    planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.client')}: ${dataset.client || '—'}` })]));
-    if (dataset.validUntil) planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.validUntil')}: ${dataset.validUntil}` })]));
+    // Offline maps
+    body.append(await buildOfflineSection(dataset || { points: [], client: '' }, baseLayers));
+
+    // Your travel plan — one document now (recommendation list and/or route).
+    // Importing a new file REPLACES whatever is loaded (see importTravelFile).
+    const planRows = [el('h3', { 'data-i18n': 'settings.plan' })];
+    if (hasPlaces) {
+      planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.client')}: ${dataset.client || '—'}` })]));
+      if (dataset.validUntil) planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.validUntil')}: ${dataset.validUntil}` })]));
+    }
+    if (itinerary) {
+      planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.route')}: ${itinerary.title || '—'} · ${t('settings.stops', { n: (itinerary.stops || []).length })}` })]));
+    }
+    planRows.push(el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.replacePlan', onclick: () => replaceFile() }));
+    body.append(el('div', { class: 'section' }, planRows));
+
+    // Disclaimer (re-readable) at the bottom — resolved in the current language.
+    const disclaimer = resolveText('disclaimer', getLang(), dataset);
+    if (disclaimer) {
+      const box = el('div', { class: 'disclaimer__scroll', style: { marginTop: '.5rem' } });
+      box.innerHTML = paragraphsHtml(disclaimer);
+      body.append(el('div', { class: 'section' }, [el('h3', { 'data-i18n': 'settings.disclaimer' }), box]));
+    }
+
+    bodyWrap.replaceChildren(body);
+    applyTranslations(bodyWrap);
   }
-  if (itinerary) {
-    planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.route')}: ${itinerary.title || '—'} · ${t('settings.stops', { n: (itinerary.stops || []).length })}` })]));
-  }
-  planRows.push(el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.replacePlan', onclick: () => replaceFile() }));
-  body.append(el('div', { class: 'section' }, planRows));
 
-  // Disclaimer (re-readable) at the bottom.
-  const disclaimer = resolveText('disclaimer', getLang(), dataset);
-  if (disclaimer) {
-    const box = el('div', { class: 'disclaimer__scroll', style: { marginTop: '.5rem' } });
-    box.innerHTML = paragraphsHtml(disclaimer);
-    body.append(el('div', { class: 'section' }, [el('h3', { 'data-i18n': 'settings.disclaimer' }), box]));
-  }
+  await renderBody();
 
-  const ctrl = openDrawer({ title: t('settings.title'), body });
+  // Re-render the drawer live when the language changes; clean up on close.
+  let ctrl;
+  const unsub = onLangChange(async () => {
+    await renderBody();
+    const h = ctrl?.drawer.querySelector('.drawer__head h2');
+    if (h) h.textContent = t('settings.title');
+  });
+  ctrl = openDrawer({ title: t('settings.title'), body: bodyWrap, onClose: unsub });
   applyTranslations(ctrl.drawer);
 }
 

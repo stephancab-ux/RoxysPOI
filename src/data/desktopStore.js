@@ -48,9 +48,19 @@ export async function setDocumentsFolder(path) {
   await s.set('documentsFolder', path);
   await s.save();
 }
-/** Pick a folder (for the documents location). */
+
+// Folder where "Save backup" drops timestamped master snapshots.
+export async function getBackupFolder() {
+  return (await (await store()).get('backupFolder')) || null;
+}
+export async function setBackupFolder(path) {
+  const s = await store();
+  await s.set('backupFolder', path);
+  await s.save();
+}
+/** Pick a folder (for the documents or backup location). */
 export function pickFolder() {
-  return open({ title: 'Choose your documents folder', directory: true, multiple: false });
+  return open({ title: 'Choose a folder', directory: true, multiple: false });
 }
 
 /** Write arbitrary text to an exact path (for a one-off "save as"). */
@@ -86,25 +96,29 @@ function stamp(d = new Date()) {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
 
+// The on-disk shape: only the data the app owns (pretty-printed, stable).
+function serializeMaster(master) {
+  return JSON.stringify({ categories: master.categories, pois: master.pois, content: master.content || null }, null, 2);
+}
+
 /**
- * Write the master object to `path` (pretty JSON). When `backup` is true, also
- * drop a timestamped copy in a `backups/` subfolder next to the file.
- * @returns {Promise<{ ts:number, backupPath:?string }>}
+ * Write the master object to `path` (pretty JSON). This is the continuous
+ * autosave target — no backup is made here (backups are an explicit action).
+ * @returns {Promise<{ ts:number }>}
  */
-export async function writeMasterFile(path, master, { backup = true } = {}) {
-  const json = JSON.stringify({ categories: master.categories, pois: master.pois, content: master.content || null }, null, 2);
-  await invoke('write_text', { path, contents: json });
-  let backupPath = null;
-  if (backup) {
-    try {
-      backupPath = await invoke('write_backup', { masterPath: path, contents: json, stamp: stamp() });
-    } catch {
-      /* a failed backup must not block the primary save */
-    }
-  }
+export async function writeMasterFile(path, master) {
+  await invoke('write_text', { path, contents: serializeMaster(master) });
   const ts = Date.now();
   await setLastSavedAt(ts);
-  return { ts, backupPath };
+  return { ts };
+}
+
+/**
+ * Drop a timestamped snapshot of the master into the chosen backup `folder`.
+ * @returns {Promise<string>} the backup file path.
+ */
+export async function writeBackup(folder, master) {
+  return invoke('write_backup', { folder, contents: serializeMaster(master), stamp: stamp() });
 }
 
 // ---- Native file pickers ----------------------------------------------------
