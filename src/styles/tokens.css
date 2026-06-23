@@ -1,0 +1,70 @@
+/* =============================================================================
+   Design tokens — brand palette + light/dark themes.
+   Dark is the default; [data-theme="light"] on <html> switches to light.
+   ============================================================================= */
+
+:root {
+  /* Brand */
+  --gold: #b8902f;
+  --gold-strong: #cda23f;
+  --gold-soft: rgba(184, 144, 47, 0.16);
+
+  /* Dark theme (default) */
+  --bg: #101010;
+  --surface: #1b1b1d;
+  --surface-2: #272729;
+  --surface-3: #333335;
+  --text: #f4f4f5;
+  --text-muted: #a9a9ad;
+  --border: #3a3a3d;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --danger: #e5484d;
+  --ok: #46a758;
+
+  /* Shared */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+  --header-h: 56px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --tap: 44px; /* minimum touch target */
+}
+
+html[data-theme='light'] {
+  --bg: #f6f6f3;
+  --surface: #ffffff;
+  --surface-2: #efefea;
+  --surface-3: #e3e3dc;
+  --text: #19191a;
+  --text-muted: #5c5c60;
+  --border: #d9d9d2;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+a {
+  color: var(--gold-strong);
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold-strong);
+  outline-offset: 2px;
+}

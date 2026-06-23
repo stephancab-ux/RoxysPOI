@@ -1,0 +1,26 @@
+{
+  "name": "roxys-travel-plan",
+  "version": "1.0.0",
+  "description": "Roxys Travel Plan — offline-capable travel-map PWA (client viewer + admin).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@protomaps/basemaps": "^5.7.0",
+    "@turf/boolean-point-in-polygon": "^7.2.0",
+    "idb": "^8.0.3",
+    "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
+    "papaparse": "^5.5.3",
+    "pmtiles": "^4.3.0",
+    "protomaps-leaflet": "^5.0.1"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0",
+    "vite-plugin-pwa": "^1.0.0"
+  }
+}
