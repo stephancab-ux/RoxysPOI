@@ -61,9 +61,10 @@
   "settings.about": "About",
 
   "expiry.title": "Your travel access has ended",
-  "expiry.body": "This map was available only during your travel dates ({from} – {until}). We hope you had an amazing trip!",
+  "expiry.body": "This map was available only during your travel dates. We hope you had an amazing trip!",
+  "expiry.dates": "Your travel dates: {from} – {until}",
   "expiry.contact": "To plan your next adventure, contact Roxys Travel Plan.",
-  "expiry.contactLine": "hello@roxystravelplan.com · (placeholder — the agency can edit this)",
+  "expiry.contactLine": "info@roxystravelplan.com",
 
   "app.update": "A new version is available.",
   "app.update.reload": "Reload",
@@ -161,5 +162,27 @@
   "admin.data.reset": "Reset to seed data",
   "admin.data.resetConfirm": "Replace all current data with the built-in seed data?",
   "admin.data.loaded": "Master data loaded.",
-  "admin.data.saved": "Saved."
+  "admin.data.saved": "Saved.",
+  "admin.data.merged": "{added} added · {updated} updated.",
+
+  "admin.poi.autofill": "Auto-fill from link",
+  "admin.poi.urlHint": "Paste a Google Maps link → fills name, coordinates and country.",
+  "admin.poi.autofillNone": "Couldn't read a name or coordinates from that link.",
+
+  "admin.pois.export": "Export CSV",
+  "admin.pois.deleteSelected": "Delete selected ({n})",
+  "admin.pois.deleteSelectedConfirm": "Delete {n} selected points?",
+  "admin.pois.deleted": "{n} deleted",
+
+  "admin.tab.texts": "Texts",
+  "admin.texts.title": "Editable texts",
+  "admin.texts.hint": "Edit the messages travelers see. Save here, then publish the site to make changes live.",
+  "admin.texts.welcome": "Welcome message",
+  "admin.texts.expiry": "Trip-ended message",
+  "admin.texts.email": "Contact email",
+  "admin.texts.export": "Export content.json",
+  "admin.texts.saved": "Saved — publish the site to make it live.",
+
+  "admin.import.merged": "{added} added · {updated} updated.",
+  "admin.import.categoryColumn": "If a Category column is mapped, each row uses its own category (new ones are created)."
 }

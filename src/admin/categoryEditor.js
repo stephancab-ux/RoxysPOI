@@ -11,13 +11,20 @@ export function renderCategoryEditor(container, { master, onChange }) {
   const countOf = (id) => master.pois.filter((p) => p.categoryId === id).length;
 
   function openForm(existing) {
-    const cat = existing || { name: '', emoji: '📍', color: '#B8902F' };
-    const name = el('input', { type: 'text', value: cat.name });
+    const cat = existing || { name: '', names: { en: '', fr: '', de: '' }, emoji: '📍', color: '#B8902F' };
+    const nm = cat.names || { en: cat.name || '', fr: '', de: '' };
+    const nameEn = el('input', { type: 'text', value: nm.en || cat.name || '' });
+    const nameFr = el('input', { type: 'text', value: nm.fr || '' });
+    const nameDe = el('input', { type: 'text', value: nm.de || '' });
     const emoji = el('input', { type: 'text', value: cat.emoji, maxlength: 4, style: { width: '5rem', textAlign: 'center', fontSize: '1.4rem' } });
     const color = el('input', { type: 'color', value: cat.color, style: { width: '4rem', height: '40px', padding: '2px' } });
 
     const body = el('div', { class: 'stack' }, [
-      el('div', { class: 'field' }, [el('label', { text: t('admin.cat.name') }), name]),
+      el('div', { class: 'field' }, [el('label', { text: `${t('admin.cat.name')} (English)` }), nameEn]),
+      el('div', { class: 'grid2' }, [
+        el('div', { class: 'field' }, [el('label', { text: 'Français' }), nameFr]),
+        el('div', { class: 'field' }, [el('label', { text: 'Deutsch' }), nameDe]),
+      ]),
       el('div', { class: 'row' }, [
         el('div', { class: 'field' }, [el('label', { text: t('admin.cat.emoji') }), emoji]),
         el('div', { class: 'field' }, [el('label', { text: t('admin.cat.color') }), color]),
@@ -28,7 +35,13 @@ export function renderCategoryEditor(container, { master, onChange }) {
       class: 'btn btn--primary',
       text: t('common.save'),
       onclick: async () => {
-        const data = { name: name.value.trim() || 'Untitled', emoji: emoji.value.trim() || '📍', color: color.value };
+        const en = nameEn.value.trim() || 'Untitled';
+        const data = {
+          name: en,
+          names: { en, fr: nameFr.value.trim() || en, de: nameDe.value.trim() || en },
+          emoji: emoji.value.trim() || '📍',
+          color: color.value,
+        };
         if (existing) Object.assign(existing, data);
         else master.categories.push({ id: genId('cat'), ...data });
         await persistMaster(master);

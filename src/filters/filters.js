@@ -4,9 +4,9 @@
 // category is enabled AND its country is enabled.
 // =============================================================================
 
-import { countriesOf } from '../data/schema.js';
+import { countriesOf, categoryName } from '../data/schema.js';
 import { el } from '../ui/components.js';
-import { t } from '../ui/i18n.js';
+import { t, getLang } from '../ui/i18n.js';
 
 export function createFilters(dataset) {
   const allCountries = countriesOf(dataset.points);
@@ -54,7 +54,7 @@ export function createFilters(dataset) {
             emit();
           },
         },
-        [el('span', { class: 'cat-pill__emoji', text: c.emoji }), el('span', { text: c.name })]
+        [el('span', { class: 'cat-pill__emoji', text: c.emoji }), el('span', { text: categoryName(c, getLang()) })]
       );
       bar.append(pill);
     }
@@ -82,7 +82,7 @@ export function createFilters(dataset) {
                 syncBar();
               },
             }),
-            el('span', { text: `${c.emoji} ${c.name}` }),
+            el('span', { text: `${c.emoji} ${categoryName(c, getLang())}` }),
           ])
         )
       );

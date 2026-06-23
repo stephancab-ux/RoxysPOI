@@ -55,15 +55,25 @@ export default defineConfig({
         navigateFallback: null,
         runtimeCaching: [
           {
-            // OpenStreetMap raster tiles — PASSIVE cache of tiles the user has
-            // actually viewed (within OSM tile usage policy). We never bulk
-            // prefetch raster tiles; offline coverage uses PMTiles vector packs.
-            urlPattern: ({ url }) =>
-              /(^|\.)tile\.openstreetmap\.org$/.test(url.hostname) && url.pathname.endsWith('.png'),
+            // OpenFreeMap vector basemap (style, glyphs, sprite, vector tiles) —
+            // PASSIVE cache of what the user actually viewed, so a revisit still
+            // shows the last area. We never bulk-prefetch; offline coverage of new
+            // areas uses the downloadable PMTiles vector packs.
+            urlPattern: ({ url }) => url.hostname === 'tiles.openfreemap.org',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'openfreemap',
+              expiration: { maxEntries: 1500, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // OSM raster — only the internal admin map uses it. Passive.
+            urlPattern: ({ url }) => /(^|\.)tile\.openstreetmap\.org$/.test(url.hostname),
             handler: 'CacheFirst',
             options: {
               cacheName: 'osm-raster-tiles',
-              expiration: { maxEntries: 800, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              expiration: { maxEntries: 400, maxAgeSeconds: 7 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

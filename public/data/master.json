@@ -1,16 +1,16 @@
 {
   "categories": [
-    { "id": "cat-beach", "name": "Beach", "emoji": "🏖️", "color": "#2A9D8F" },
-    { "id": "cat-food", "name": "Food", "emoji": "🍜", "color": "#E76F51" },
-    { "id": "cat-drink", "name": "Drink", "emoji": "🍹", "color": "#9B5DE5" },
-    { "id": "cat-coffee", "name": "Coffee Breaky", "emoji": "☕", "color": "#6F4E37" },
-    { "id": "cat-hikes", "name": "Hikes", "emoji": "🥾", "color": "#588157" },
-    { "id": "cat-animal", "name": "Animal Land", "emoji": "🐾", "color": "#F4A261" },
-    { "id": "cat-attraction", "name": "Attraction", "emoji": "⭐", "color": "#264653" }
+    { "id": "cat-beach", "name": "Beach", "names": { "en": "Beach", "fr": "Plage", "de": "Strand" }, "emoji": "🏖️", "color": "#2A9D8F" },
+    { "id": "cat-food", "name": "Food", "names": { "en": "Food", "fr": "Restaurant", "de": "Essen" }, "emoji": "🍜", "color": "#E76F51" },
+    { "id": "cat-drink", "name": "Drink", "names": { "en": "Drink", "fr": "Bar", "de": "Getränke" }, "emoji": "🍹", "color": "#9B5DE5" },
+    { "id": "cat-coffee", "name": "Coffee Breaky", "names": { "en": "Coffee Breaky", "fr": "Pause café", "de": "Kaffeepause" }, "emoji": "☕", "color": "#6F4E37" },
+    { "id": "cat-hikes", "name": "Hikes", "names": { "en": "Hikes", "fr": "Randonnées", "de": "Wanderungen" }, "emoji": "🥾", "color": "#588157" },
+    { "id": "cat-animal", "name": "Animal Land", "names": { "en": "Animal Land", "fr": "Animaux", "de": "Tierwelt" }, "emoji": "🐾", "color": "#F4A261" },
+    { "id": "cat-attraction", "name": "Attraction", "names": { "en": "Attraction", "fr": "Attraction", "de": "Attraktion" }, "emoji": "⭐", "color": "#264653" }
   ],
   "pois": [
     { "id": "poi-1", "name": "Kelingking Beach", "note": "Iconic T-Rex cliff", "googleUrl": "https://www.google.com/maps/place/Kelingking+Beach", "lat": -8.7503, "lng": 115.473, "categoryId": "cat-beach", "country": "Indonesia" },
-    { "id": "poi-2", "name": "Dreamland Beach", "note": null, "googleUrl": "https://www.google.com/maps/place/Dreamland+Beach", "lat": -8.8146, "lng": 115.105, "categoryId": "cat-beach", "country": "Indonesia" },
+    { "id": "poi-2", "name": "Dreamland Beach", "note": null, "googleUrl": "https://www.google.com/maps/place/Dreamland+Beach", "lat": -8.7955, "lng": 115.1027, "categoryId": "cat-beach", "country": "Indonesia" },
     { "id": "poi-3", "name": "Warung Sister", "note": "Local warung, great value", "googleUrl": "https://www.google.com/maps/place/Warung+Sister", "lat": -8.705, "lng": 115.169, "categoryId": "cat-food", "country": "Indonesia" },
     { "id": "poi-4", "name": "Bali Museum", "note": null, "googleUrl": "https://www.google.com/maps/place/Bali+Museum", "lat": -8.6573, "lng": 115.2167, "categoryId": "cat-attraction", "country": "Indonesia" },
     { "id": "poi-5", "name": "Mount Batur", "note": "Sunrise trek", "googleUrl": "https://www.google.com/maps/place/Mount+Batur", "lat": -8.2422, "lng": 115.3753, "categoryId": "cat-hikes", "country": "Indonesia" },

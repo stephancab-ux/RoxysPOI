@@ -5,8 +5,9 @@
 
 import { el, mount, toast, pickFile } from '../ui/components.js';
 import { t } from '../ui/i18n.js';
-import { genId } from '../data/schema.js';
+import { normalizeCategory } from '../data/schema.js';
 import { persistMaster } from '../data/master.js';
+import { upsertPois } from '../data/merge.js';
 import { parseCsv, autoMap, buildPois } from '../csv/importCsv.js';
 import { loadCountryTagger } from '../geo/countryTag.js';
 
@@ -17,6 +18,7 @@ const FIELDS = [
   ['lat', 'admin.poi.lat'],
   ['lng', 'admin.poi.lng'],
   ['country', 'admin.poi.country'],
+  ['category', 'admin.poi.category'],
 ];
 
 export function renderImportPanel(container, { master, onChange }) {
@@ -91,30 +93,48 @@ export function renderImportPanel(container, { master, onChange }) {
         if (categoryId === '__new__') {
           const name = newCatBox.querySelector('#newcat-name').value.trim();
           if (!name) return toast(t('admin.import.needCategory'), 'error');
-          const cat = { id: genId('cat'), name, emoji: newCatBox.querySelector('#newcat-emoji').value.trim() || '📍', color: newCatBox.querySelector('#newcat-color').value };
+          const cat = normalizeCategory({ name, emoji: newCatBox.querySelector('#newcat-emoji').value.trim() || '📍', color: newCatBox.querySelector('#newcat-color').value });
           master.categories.push(cat);
           categoryId = cat.id;
         }
+        // Per-row Category ("list") column → match an existing category by any of
+        // its language names, otherwise create one.
+        const resolveCategory = (nm) => {
+          const key = nm.trim().toLowerCase();
+          if (!key) return null;
+          let cat = master.categories.find(
+            (c) => (c.name || '').toLowerCase() === key || (c.names && Object.values(c.names).some((v) => (v || '').toLowerCase() === key))
+          );
+          if (!cat) {
+            cat = normalizeCategory({ name: nm.trim() });
+            master.categories.push(cat);
+          }
+          return cat.id;
+        };
+
         runBtn.disabled = true;
         const tagger = await loadCountryTagger();
-        const { pois, imported, tagged, missing } = buildPois(parsed.rows, mapping, categoryId, tagger);
-        master.pois.push(...pois);
+        const { pois, imported, tagged, missing } = buildPois(parsed.rows, mapping, categoryId, tagger, resolveCategory);
+        const { added, updated } = upsertPois(master.pois, pois);
         await persistMaster(master);
         onChange?.();
         resultBox.replaceChildren(
-          el('p', { class: 'stack' }, [el('strong', { text: t('admin.import.result', { imported, tagged, missing: missing.length }) })]),
+          el('p', { class: 'stack' }, [
+            el('strong', { text: t('admin.import.merged', { added, updated }) }),
+            el('div', { class: 'muted', text: t('admin.import.result', { imported, tagged, missing: missing.length }) }),
+          ]),
           missing.length
             ? el('div', {}, [el('p', { class: 'muted', text: t('admin.import.missingList') }), el('ul', {}, missing.slice(0, 30).map((p) => el('li', { text: p.name })))])
             : null
         );
         runBtn.disabled = false;
-        toast(t('admin.import.result', { imported, tagged, missing: missing.length }), 'ok');
+        toast(t('admin.import.merged', { added, updated }), 'ok');
       },
     });
 
     return el('div', { class: 'stack', style: { marginTop: '1rem' } }, [
       el('div', { class: 'section' }, [el('h3', { text: t('admin.import.mapping') }), ...mapRows]),
-      el('div', { class: 'section' }, [el('h3', { text: t('admin.import.category') }), catSelect, newCatBox]),
+      el('div', { class: 'section' }, [el('h3', { text: t('admin.import.category') }), catSelect, newCatBox, el('p', { class: 'muted', text: t('admin.import.categoryColumn') })]),
       warn,
       runBtn,
       resultBox,

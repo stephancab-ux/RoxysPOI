@@ -61,9 +61,10 @@
   "settings.about": "À propos",
 
   "expiry.title": "Votre accès au voyage a pris fin",
-  "expiry.body": "Cette carte était disponible uniquement pendant vos dates de voyage ({from} – {until}). Nous espérons que vous avez fait un magnifique voyage !",
+  "expiry.body": "Cette carte était disponible uniquement pendant vos dates de voyage. Nous espérons que vous avez fait un magnifique voyage !",
+  "expiry.dates": "Vos dates de voyage : {from} – {until}",
   "expiry.contact": "Pour préparer votre prochaine aventure, contactez Roxys Travel Plan.",
-  "expiry.contactLine": "hello@roxystravelplan.com · (texte provisoire — modifiable par l'agence)",
+  "expiry.contactLine": "info@roxystravelplan.com",
 
   "app.update": "Une nouvelle version est disponible.",
   "app.update.reload": "Recharger",
@@ -161,5 +162,27 @@
   "admin.data.reset": "Réinitialiser aux données par défaut",
   "admin.data.resetConfirm": "Remplacer toutes les données actuelles par les données par défaut intégrées ?",
   "admin.data.loaded": "Données maîtres chargées.",
-  "admin.data.saved": "Enregistré."
+  "admin.data.saved": "Enregistré.",
+  "admin.data.merged": "{added} ajoutés · {updated} mis à jour.",
+
+  "admin.poi.autofill": "Remplir depuis le lien",
+  "admin.poi.urlHint": "Collez un lien Google Maps → remplit le nom, les coordonnées et le pays.",
+  "admin.poi.autofillNone": "Impossible de lire un nom ou des coordonnées depuis ce lien.",
+
+  "admin.pois.export": "Exporter CSV",
+  "admin.pois.deleteSelected": "Supprimer la sélection ({n})",
+  "admin.pois.deleteSelectedConfirm": "Supprimer {n} lieux sélectionnés ?",
+  "admin.pois.deleted": "{n} supprimés",
+
+  "admin.tab.texts": "Textes",
+  "admin.texts.title": "Textes modifiables",
+  "admin.texts.hint": "Modifiez les messages vus par les voyageurs. Enregistrez ici, puis publiez le site pour activer les changements.",
+  "admin.texts.welcome": "Message d'accueil",
+  "admin.texts.expiry": "Message de fin de voyage",
+  "admin.texts.email": "E-mail de contact",
+  "admin.texts.export": "Exporter content.json",
+  "admin.texts.saved": "Enregistré — publiez le site pour activer.",
+
+  "admin.import.merged": "{added} ajoutés · {updated} mis à jour.",
+  "admin.import.categoryColumn": "Si une colonne Catégorie est associée, chaque ligne utilise sa propre catégorie (les nouvelles sont créées)."
 }

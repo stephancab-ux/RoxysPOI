@@ -14,6 +14,8 @@ export function createMap(container) {
   const map = L.map(container, {
     center: MAP.defaultCenter,
     zoom: MAP.defaultZoom,
+    minZoom: 1, // recommended with maplibre-gl-leaflet to keep the GL base in sync
+    maxZoom: MAP.maxZoom, // the GL base layer doesn't set one, so markercluster needs it here
     zoomControl: true,
     attributionControl: true,
     worldCopyJump: true,

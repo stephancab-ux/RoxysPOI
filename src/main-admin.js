@@ -20,6 +20,8 @@ import { renderPoiTable } from './admin/poiTable.js';
 import { renderCategoryEditor } from './admin/categoryEditor.js';
 import { renderGenerator } from './admin/generator.js';
 import { renderImportPanel } from './admin/importPanel.js';
+import { renderTextsPanel } from './admin/textsPanel.js';
+import { upsertPois, mergeCategories } from './data/merge.js';
 
 const root = document.getElementById('admin-app');
 let master = { categories: [], pois: [] };
@@ -59,6 +61,7 @@ const TABS = [
   ['categories', 'admin.tab.categories', (c) => renderCategoryEditor(c, { master, onChange })],
   ['generate', 'admin.tab.generate', (c) => renderGenerator(c, { master })],
   ['import', 'admin.tab.import', (c) => renderImportPanel(c, { master, onChange })],
+  ['texts', 'admin.tab.texts', (c) => renderTextsPanel(c, { master })],
   ['data', 'admin.tab.data', (c) => renderDataPanel(c)],
 ];
 
@@ -122,9 +125,13 @@ function renderDataPanel(container) {
           if (!file) return;
           try {
             const raw = JSON.parse(await file.text());
-            master = { categories: (raw.categories || []).map(normalizeCategory), pois: (raw.pois || []).map(normalizePOI).filter(Boolean) };
+            const incCats = (raw.categories || []).map(normalizeCategory);
+            const incPois = (raw.pois || []).map(normalizePOI).filter(Boolean);
+            master.categories = mergeCategories(master.categories, incCats);
+            const { added, updated } = upsertPois(master.pois, incPois);
+            if (raw.content) master.content = raw.content;
             await persistMaster(master);
-            toast(t('admin.data.loaded'), 'ok');
+            toast(t('admin.data.merged', { added, updated }), 'ok');
             renderTab();
           } catch {
             toast(t('welcome.badFile'), 'error');

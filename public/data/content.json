@@ -1,0 +1,13 @@
+{
+  "welcome": {
+    "en": "Welcome to Roxys Travel Plan — a personal map of hand-picked places for your trip.\nTap \"Import my travel file\" and choose the file we emailed you. Your places then work right here on the map, even offline.",
+    "fr": "Bienvenue sur Roxys Travel Plan — une carte personnelle de lieux sélectionnés pour votre voyage.\nAppuyez sur « Importer mon fichier de voyage » et choisissez le fichier que nous vous avons envoyé. Vos lieux fonctionnent ensuite ici sur la carte, même hors ligne.",
+    "de": "Willkommen bei Roxys Travel Plan — eine persönliche Karte handverlesener Orte für Ihre Reise.\nTippen Sie auf „Meine Reisedatei importieren“ und wählen Sie die gesendete Datei. Ihre Orte funktionieren dann direkt hier auf der Karte, sogar offline."
+  },
+  "expiry": {
+    "en": "This map was available only during your travel dates. We hope you had an amazing trip!",
+    "fr": "Cette carte était disponible uniquement pendant vos dates de voyage. Nous espérons que vous avez fait un magnifique voyage !",
+    "de": "Diese Karte war nur während Ihrer Reisedaten verfügbar. Wir hoffen, Sie hatten eine wunderbare Reise!"
+  },
+  "email": "info@roxystravelplan.com"
+}

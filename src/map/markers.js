@@ -5,7 +5,8 @@
 
 import L from 'leaflet';
 import { el } from '../ui/components.js';
-import { t } from '../ui/i18n.js';
+import { t, getLang } from '../ui/i18n.js';
+import { categoryName } from '../data/schema.js';
 
 /** A divIcon styled as a colored pin with the category emoji centered. */
 export function pinIcon(category) {
@@ -15,8 +16,8 @@ export function pinIcon(category) {
     className: 'poi-pin',
     html: `<div class="poi-pin__body" style="background:${color}"><span class="poi-pin__emoji">${emoji}</span></div>`,
     iconSize: [32, 32],
-    iconAnchor: [16, 30], // tip of the teardrop
-    popupAnchor: [0, -28],
+    iconAnchor: [16, 38], // the teardrop's point sits ~38px down (the rotated corner overflows the box)
+    popupAnchor: [0, -40],
   });
 }
 
@@ -27,7 +28,7 @@ function popupContent(poi, category) {
     category &&
       el('div', { class: 'popup__cat' }, [
         el('span', { text: category.emoji }),
-        el('span', { text: category.name }),
+        el('span', { text: categoryName(category, getLang()) }),
       ]),
   ];
   if (poi.note) {

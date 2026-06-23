@@ -42,14 +42,28 @@ export function genId(prefix = 'id') {
 
 const isFiniteNum = (v) => typeof v === 'number' && Number.isFinite(v);
 
-/** Coerce loose input into a clean Category. */
+/** Coerce loose input into a clean Category with per-language names. */
 export function normalizeCategory(c) {
+  const base = String(c.name ?? '').trim() || 'Untitled';
+  const src = c.names && typeof c.names === 'object' ? c.names : {};
+  const en = String(src.en ?? base).trim() || base;
   return {
     id: c.id || genId('cat'),
-    name: String(c.name ?? '').trim() || 'Untitled',
+    name: en, // EN is the canonical fallback used everywhere a single name is needed
+    names: {
+      en,
+      fr: String(src.fr ?? '').trim() || en,
+      de: String(src.de ?? '').trim() || en,
+    },
     emoji: String(c.emoji ?? '📍').trim() || '📍',
     color: /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c.color || '') ? c.color : '#B8902F',
   };
+}
+
+/** The category's name in the given language, falling back to EN. */
+export function categoryName(cat, lang = 'en') {
+  if (!cat) return '';
+  return (cat.names && (cat.names[lang] || cat.names.en)) || cat.name || '';
 }
 
 /** Coerce loose input into a clean POI. Returns null if unusable (no name). */
@@ -67,6 +81,8 @@ export function normalizePOI(p) {
     lng: isFiniteNum(lng) ? lng : null,
     categoryId: p.categoryId || '',
     country: p.country ? String(p.country).trim() : '',
+    // Stable Google "feature id" (0x…:0x…) used to dedupe imports; '' if unknown.
+    placeId: p.placeId ? String(p.placeId).trim() : '',
   };
 }
 

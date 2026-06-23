@@ -9,10 +9,11 @@ import './styles/map.css';
 
 import { BRAND, LANGUAGES } from './config.js';
 import { initTheme, getTheme, setTheme, logoForTheme } from './ui/theme.js';
-import { initI18n, setLang, getLang, t, applyTranslations } from './ui/i18n.js';
+import { initI18n, setLang, getLang, t, applyTranslations, onLangChange } from './ui/i18n.js';
 import { el, clear, toast, openDrawer, pickFile } from './ui/components.js';
 import { loadDataset } from './data/db.js';
-import { isExpired } from './data/schema.js';
+import { isExpired, categoryName } from './data/schema.js';
+import { loadContent, getContent, pickLang } from './data/content.js';
 import { importClientFile } from './data/clientFile.js';
 import { createMap, createLocator, fitToPoints } from './map/mapCore.js';
 import { BaseLayers } from './map/baseLayers.js';
@@ -22,6 +23,16 @@ import { createFilters } from './filters/filters.js';
 import { buildOfflineSection, hydratePacks } from './offline/packs.js';
 
 const root = document.getElementById('app');
+
+/** Welcome intro text — agency-edited (content.json) with the i18n default as fallback. */
+function welcomeIntroEl() {
+  const p = el('p', { class: 'welcome__intro' });
+  const c = getContent();
+  const txt = c && pickLang(c.welcome, getLang());
+  if (txt) p.innerHTML = escapeHtml(txt).replace(/\n/g, '<br>');
+  else p.innerHTML = t('welcome.intro');
+  return p;
+}
 
 // ---- Welcome screen ----------------------------------------------------------
 function renderWelcome() {
@@ -36,9 +47,7 @@ function renderWelcome() {
         'aria-pressed': getLang() === l.code ? 'true' : 'false',
         onclick: async () => {
           await setLang(l.code);
-          [...langRow.children].forEach((b, i) =>
-            b.setAttribute('aria-pressed', LANGUAGES[i].code === l.code ? 'true' : 'false')
-          );
+          renderWelcome(); // re-render so the intro text follows the new language
         },
       })
     )
@@ -70,7 +79,7 @@ function renderWelcome() {
       el('div', { class: 'muted', 'data-i18n': 'welcome.langPrompt', style: { marginBottom: '.5rem' } }),
       langRow,
     ]),
-    el('p', { class: 'welcome__intro', 'data-i18n-html': 'welcome.intro' }),
+    welcomeIntroEl(),
     el('div', { class: 'welcome__actions' }, [importBtn]),
   ]);
   clear(root).append(view);
@@ -79,20 +88,27 @@ function renderWelcome() {
 
 // ---- Expiry lock -------------------------------------------------------------
 function renderLock(dataset) {
-  const body = el('p', {});
-  body.innerHTML = t('expiry.body', { from: dataset.validFrom || '—', until: dataset.validUntil || '—' });
+  const lang = getLang();
+  const c = getContent();
+  const msg = (c && pickLang(c.expiry, lang)) || t('expiry.body');
+  const email = (c && c.email && c.email.trim()) || t('expiry.contactLine');
+
+  const msgEl = el('p', {});
+  msgEl.innerHTML = escapeHtml(msg).replace(/\n/g, '<br>');
+  const dates =
+    dataset.validFrom || dataset.validUntil
+      ? el('p', { class: 'muted', text: t('expiry.dates', { from: dataset.validFrom || '—', until: dataset.validUntil || '—' }) })
+      : null;
+
   const view = el('div', { class: 'lock' }, [
     el('img', { class: 'lock__logo', src: logoForTheme(), alt: BRAND.name, 'data-logo': true }),
     el('h1', { 'data-i18n': 'expiry.title' }),
-    body,
+    msgEl,
+    dates,
     el('p', { 'data-i18n': 'expiry.contact' }),
-    el('p', { class: 'muted', 'data-i18n': 'expiry.contactLine' }),
-    el('button', {
-      class: 'btn btn--ghost',
-      'data-i18n': 'settings.reimport',
-      onclick: () => replaceFile(),
-    }),
-  ]);
+    el('p', { class: 'muted' }, [el('a', { class: 'popup__link', href: `mailto:${email}`, text: email })]),
+    el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.reimport', onclick: () => replaceFile() }),
+  ].filter(Boolean));
   clear(root).append(view);
   applyTranslations(view);
 }
@@ -111,17 +127,18 @@ function renderMap(dataset) {
   });
   const search = el('div', { class: 'search' }, [searchInput, results]);
 
+  // ☰ hamburger → filters (countries/categories) · ⚙ gear → settings
   const filtersBtn = el('button', {
     class: 'fab',
     title: t('map.filters'),
     'aria-label': t('map.filters'),
-    text: '⚙',
+    text: '☰',
   });
   const settingsBtn = el('button', {
     class: 'fab',
     title: t('map.settings'),
     'aria-label': t('map.settings'),
-    text: '☰',
+    text: '⚙',
   });
 
   const appbar = el('div', { class: 'appbar' }, [logo, search, el('div', { class: 'appbar__spacer' }), filtersBtn, settingsBtn]);
@@ -151,8 +168,14 @@ function renderMap(dataset) {
   renderMarkers();
   fitToPoints(map, dataset.points);
 
-  // bottom category pills
-  root.append(filters.buildCategoryBar());
+  // bottom category pills (rebuilt when the language changes)
+  let pillBar = filters.buildCategoryBar();
+  root.append(pillBar);
+  onLangChange(() => {
+    const fresh = filters.buildCategoryBar();
+    pillBar.replaceWith(fresh);
+    pillBar = fresh;
+  });
 
   // search behaviour
   const runSearch = () => {
@@ -193,7 +216,7 @@ function renderMap(dataset) {
     const cat = filters.getCategory(p.categoryId);
     const html = [
       `<div class="popup__title">${escapeHtml(p.name)}</div>`,
-      cat ? `<div class="popup__cat">${cat.emoji} ${escapeHtml(cat.name)}</div>` : '',
+      cat ? `<div class="popup__cat">${cat.emoji} ${escapeHtml(categoryName(cat, getLang()))}</div>` : '',
       p.note ? `<div class="popup__note">${escapeHtml(p.note)}</div>` : '',
       p.googleUrl
         ? `<a class="popup__link" href="${encodeURI(p.googleUrl)}" target="_blank" rel="noopener noreferrer">📍 ${escapeHtml(t('popup.openGoogle'))}</a>`
@@ -301,6 +324,7 @@ async function startMap(dataset) {
 async function main() {
   initTheme();
   await initI18n();
+  await loadContent(); // agency-editable welcome/expiry/email text
   const dataset = await loadDataset();
   if (dataset && Array.isArray(dataset.points)) startMap(dataset);
   else renderWelcome();

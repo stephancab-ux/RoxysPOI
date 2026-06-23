@@ -58,13 +58,13 @@ export const DEFAULT_THEME = 'dark'; // 'dark' | 'light'
 // Each category renders the SAME emoji + colour worldwide. Fully editable.
 // -----------------------------------------------------------------------------
 export const SEED_CATEGORIES = [
-  { id: 'cat-beach', name: 'Beach', emoji: '🏖️', color: '#2A9D8F' },
-  { id: 'cat-food', name: 'Food', emoji: '🍜', color: '#E76F51' },
-  { id: 'cat-drink', name: 'Drink', emoji: '🍹', color: '#9B5DE5' },
-  { id: 'cat-coffee', name: 'Coffee Breaky', emoji: '☕', color: '#6F4E37' },
-  { id: 'cat-hikes', name: 'Hikes', emoji: '🥾', color: '#588157' },
-  { id: 'cat-animal', name: 'Animal Land', emoji: '🐾', color: '#F4A261' },
-  { id: 'cat-attraction', name: 'Attraction', emoji: '⭐', color: '#264653' },
+  { id: 'cat-beach', name: 'Beach', names: { en: 'Beach', fr: 'Plage', de: 'Strand' }, emoji: '🏖️', color: '#2A9D8F' },
+  { id: 'cat-food', name: 'Food', names: { en: 'Food', fr: 'Restaurant', de: 'Essen' }, emoji: '🍜', color: '#E76F51' },
+  { id: 'cat-drink', name: 'Drink', names: { en: 'Drink', fr: 'Bar', de: 'Getränke' }, emoji: '🍹', color: '#9B5DE5' },
+  { id: 'cat-coffee', name: 'Coffee Breaky', names: { en: 'Coffee Breaky', fr: 'Pause café', de: 'Kaffeepause' }, emoji: '☕', color: '#6F4E37' },
+  { id: 'cat-hikes', name: 'Hikes', names: { en: 'Hikes', fr: 'Randonnées', de: 'Wanderungen' }, emoji: '🥾', color: '#588157' },
+  { id: 'cat-animal', name: 'Animal Land', names: { en: 'Animal Land', fr: 'Animaux', de: 'Tierwelt' }, emoji: '🐾', color: '#F4A261' },
+  { id: 'cat-attraction', name: 'Attraction', names: { en: 'Attraction', fr: 'Attraction', de: 'Attraktion' }, emoji: '⭐', color: '#264653' },
 ];
 
 // -----------------------------------------------------------------------------
@@ -79,6 +79,8 @@ export const CSV_DEFAULT_MAPPING = {
   lat: ['latitude', 'lat', 'y'],
   lng: ['longitude', 'lng', 'lon', 'long', 'x'],
   country: ['country', 'address', 'location'],
+  // Optional per-row category ("list") column → each row links to its own category.
+  category: ['category', 'list', 'type', 'categorie', 'catégorie', 'kategorie'],
 };
 /** Columns we explicitly ignore from the source files. */
 export const CSV_IGNORED_COLUMNS = ['tags', 'comment'];

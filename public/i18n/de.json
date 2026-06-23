@@ -61,9 +61,10 @@
   "settings.about": "Über",
 
   "expiry.title": "Ihr Reisezugang ist abgelaufen",
-  "expiry.body": "Diese Karte war nur während Ihrer Reisedaten verfügbar ({from} – {until}). Wir hoffen, Sie hatten eine wunderbare Reise!",
+  "expiry.body": "Diese Karte war nur während Ihrer Reisedaten verfügbar. Wir hoffen, Sie hatten eine wunderbare Reise!",
+  "expiry.dates": "Ihre Reisedaten: {from} – {until}",
   "expiry.contact": "Für Ihr nächstes Abenteuer kontaktieren Sie Roxys Travel Plan.",
-  "expiry.contactLine": "hello@roxystravelplan.com · (Platzhalter — von der Agentur bearbeitbar)",
+  "expiry.contactLine": "info@roxystravelplan.com",
 
   "app.update": "Eine neue Version ist verfügbar.",
   "app.update.reload": "Neu laden",
@@ -161,5 +162,27 @@
   "admin.data.reset": "Auf Ausgangsdaten zurücksetzen",
   "admin.data.resetConfirm": "Alle aktuellen Daten durch die integrierten Ausgangsdaten ersetzen?",
   "admin.data.loaded": "Stammdaten geladen.",
-  "admin.data.saved": "Gespeichert."
+  "admin.data.saved": "Gespeichert.",
+  "admin.data.merged": "{added} hinzugefügt · {updated} aktualisiert.",
+
+  "admin.poi.autofill": "Aus Link ausfüllen",
+  "admin.poi.urlHint": "Google-Maps-Link einfügen → füllt Name, Koordinaten und Land.",
+  "admin.poi.autofillNone": "Aus diesem Link ließen sich kein Name und keine Koordinaten lesen.",
+
+  "admin.pois.export": "CSV exportieren",
+  "admin.pois.deleteSelected": "Auswahl löschen ({n})",
+  "admin.pois.deleteSelectedConfirm": "{n} ausgewählte Orte löschen?",
+  "admin.pois.deleted": "{n} gelöscht",
+
+  "admin.tab.texts": "Texte",
+  "admin.texts.title": "Bearbeitbare Texte",
+  "admin.texts.hint": "Bearbeiten Sie die für Reisende sichtbaren Texte. Hier speichern, dann die Seite veröffentlichen, um die Änderungen live zu schalten.",
+  "admin.texts.welcome": "Willkommensnachricht",
+  "admin.texts.expiry": "Reiseende-Nachricht",
+  "admin.texts.email": "Kontakt-E-Mail",
+  "admin.texts.export": "content.json exportieren",
+  "admin.texts.saved": "Gespeichert — Seite veröffentlichen, um live zu schalten.",
+
+  "admin.import.merged": "{added} hinzugefügt · {updated} aktualisiert.",
+  "admin.import.categoryColumn": "Wenn eine Kategorie-Spalte zugeordnet ist, nutzt jede Zeile ihre eigene Kategorie (neue werden angelegt)."
 }

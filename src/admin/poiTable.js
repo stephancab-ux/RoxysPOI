@@ -1,9 +1,11 @@
 // =============================================================================
-// Manage POIs: sortable/filterable table AND a map view, with add/edit/delete.
+// Manage POIs: sortable/filterable table AND a map view, with add/edit/delete,
+// bulk-delete (checkboxes), CSV export, and Google-link auto-fill on add.
 // =============================================================================
 
 import L from 'leaflet';
-import { el, mount, openModal, confirmDialog, toast } from '../ui/components.js';
+import Papa from 'papaparse';
+import { el, mount, openModal, confirmDialog, toast, downloadFile } from '../ui/components.js';
 import { t } from '../ui/i18n.js';
 import { genId, hasCoords, countriesOf } from '../data/schema.js';
 import { persistMaster } from '../data/master.js';
@@ -11,10 +13,13 @@ import { createOsmLayer } from '../map/baseLayers.js';
 import { createClusterGroup } from '../map/clusters.js';
 import { poiToMarker } from '../map/markers.js';
 import { loadCountryTagger } from '../geo/countryTag.js';
+import { parseGoogleMapsUrl } from '../csv/googleUrl.js';
 
 export function renderPoiTable(container, { master, onChange }) {
   const state = { q: '', cat: '', country: '', sortKey: 'name', sortDir: 1, view: 'table' };
   const catById = () => new Map(master.categories.map((c) => [c.id, c]));
+  const selected = new Set(); // POI ids selected for bulk delete (persists across re-renders)
+  let deleteBtn = null;
 
   function filtered() {
     const q = state.q.trim().toLowerCase();
@@ -38,10 +43,46 @@ export function renderPoiTable(container, { master, onChange }) {
     });
   }
 
+  // ---- Bulk delete -----------------------------------------------------------
+  function updateBulkUI() {
+    if (!deleteBtn) return;
+    const n = selected.size;
+    deleteBtn.textContent = t('admin.pois.deleteSelected', { n });
+    deleteBtn.disabled = n === 0;
+    deleteBtn.style.display = n === 0 ? 'none' : '';
+  }
+  async function deleteSelected() {
+    const n = selected.size;
+    if (!n) return;
+    if (!(await confirmDialog(t('admin.pois.deleteSelectedConfirm', { n }), { danger: true }))) return;
+    master.pois = master.pois.filter((p) => !selected.has(p.id));
+    selected.clear();
+    await persistMaster(master);
+    toast(t('admin.pois.deleted', { n }), 'ok');
+    render();
+    onChange?.();
+  }
+
+  // ---- Export CSV ------------------------------------------------------------
+  function exportCsv() {
+    const map = catById();
+    const rows = sorted(filtered()).map((p) => ({
+      Title: p.name,
+      Note: p.note || '',
+      URL: p.googleUrl || '',
+      Latitude: p.lat ?? '',
+      Longitude: p.lng ?? '',
+      Country: p.country || '',
+      Category: map.get(p.categoryId)?.name || '',
+      placeId: p.placeId || '',
+    }));
+    // Prepend a UTF-8 BOM so Excel opens accented / non-Latin names correctly.
+    downloadFile('roxys-points.csv', '﻿' + Papa.unparse(rows), 'text/csv;charset=utf-8');
+  }
+
   // ---- Edit / add form -------------------------------------------------------
   function openForm(existing) {
-    const map = catById();
-    const poi = existing || { name: '', note: '', googleUrl: '', lat: '', lng: '', categoryId: master.categories[0]?.id || '', country: '' };
+    const poi = existing || { name: '', note: '', googleUrl: '', lat: '', lng: '', categoryId: master.categories[0]?.id || '', country: '', placeId: '' };
     const f = {
       name: el('input', { type: 'text', value: poi.name }),
       note: el('textarea', { rows: 2 }, [poi.note || '']),
@@ -55,6 +96,23 @@ export function renderPoiTable(container, { master, onChange }) {
       lng: el('input', { type: 'number', step: 'any', value: poi.lng ?? '' }),
       url: el('input', { type: 'url', value: poi.googleUrl || '' }),
     };
+
+    // Auto-fill name + coordinates + country from a pasted Google Maps link.
+    const doAutofill = async () => {
+      const parsed = parseGoogleMapsUrl(f.url.value.trim());
+      if (!parsed.name && parsed.lat == null) return toast(t('admin.poi.autofillNone'), 'error');
+      if (parsed.name) f.name.value = parsed.name;
+      if (parsed.lat != null) f.lat.value = parsed.lat;
+      if (parsed.lng != null) f.lng.value = parsed.lng;
+      if (parsed.lat != null && parsed.lng != null) {
+        const tagger = await loadCountryTagger();
+        const c = tagger.tag(parsed.lat, parsed.lng);
+        if (c) f.country.value = c;
+      }
+      toast(parsed.name || t('common.save'), 'ok');
+    };
+    const autoFillButton = el('button', { class: 'btn btn--sm', text: t('admin.poi.autofill'), onclick: doAutofill });
+    f.url.addEventListener('paste', () => setTimeout(doAutofill, 0));
 
     const autotag = el('button', {
       class: 'btn btn--sm btn--ghost',
@@ -73,12 +131,13 @@ export function renderPoiTable(container, { master, onChange }) {
     });
 
     const body = el('div', { class: 'stack' }, [
+      el('div', { class: 'field' }, [el('label', { text: t('admin.poi.url') }), el('div', { class: 'row' }, [f.url, autoFillButton])]),
+      el('p', { class: 'muted', text: t('admin.poi.urlHint') }),
       field('admin.poi.name', f.name),
       field('admin.poi.category', f.category),
       el('div', { class: 'grid2' }, [field('admin.poi.lat', f.lat), field('admin.poi.lng', f.lng)]),
       el('div', { class: 'field' }, [el('label', { text: t('admin.poi.country') }), el('div', { class: 'row' }, [f.country, autotag])]),
       field('admin.poi.note', f.note),
-      field('admin.poi.url', f.url),
     ]);
 
     const save = el('button', {
@@ -87,6 +146,7 @@ export function renderPoiTable(container, { master, onChange }) {
       onclick: async () => {
         const name = f.name.value.trim();
         if (!name) return toast(t('common.required'), 'error');
+        const parsed = parseGoogleMapsUrl(f.url.value.trim());
         const data = {
           name,
           note: f.note.value.trim() || null,
@@ -95,6 +155,7 @@ export function renderPoiTable(container, { master, onChange }) {
           lng: f.lng.value === '' ? null : parseFloat(f.lng.value),
           categoryId: f.category.value,
           country: f.country.value.trim(),
+          placeId: parsed.placeId || poi.placeId || '',
         };
         if (existing) Object.assign(existing, data);
         else master.pois.push({ id: genId('poi'), ...data });
@@ -119,6 +180,7 @@ export function renderPoiTable(container, { master, onChange }) {
   async function remove(poi) {
     if (!(await confirmDialog(t('admin.poi.deleteConfirm'), { danger: true }))) return;
     master.pois = master.pois.filter((p) => p !== poi);
+    selected.delete(poi.id);
     await persistMaster(master);
     render();
     onChange?.();
@@ -129,6 +191,20 @@ export function renderPoiTable(container, { master, onChange }) {
     const map = catById();
     const rows = sorted(filtered());
     const capped = rows.slice(0, 1000);
+    const allIds = rows.map((p) => p.id);
+    const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
+
+    const headChk = el('input', {
+      type: 'checkbox',
+      checked: allChecked,
+      'aria-label': t('common.selectAll'),
+      onchange: (e) => {
+        if (e.target.checked) allIds.forEach((id) => selected.add(id));
+        else allIds.forEach((id) => selected.delete(id));
+        render();
+      },
+    });
+
     const head = (key, label) =>
       el(
         'th',
@@ -148,6 +224,7 @@ export function renderPoiTable(container, { master, onChange }) {
     const table = el('table', { class: 'data' }, [
       el('thead', {}, [
         el('tr', {}, [
+          el('th', { style: { cursor: 'default', width: '34px' } }, [headChk]),
           head('name', t('admin.pois.col.name')),
           head('category', t('admin.pois.col.category')),
           head('country', t('admin.pois.col.country')),
@@ -160,7 +237,18 @@ export function renderPoiTable(container, { master, onChange }) {
         {},
         capped.map((p) => {
           const c = map.get(p.categoryId);
+          const chk = el('input', {
+            type: 'checkbox',
+            checked: selected.has(p.id),
+            onchange: (e) => {
+              if (e.target.checked) selected.add(p.id);
+              else selected.delete(p.id);
+              updateBulkUI();
+              headChk.checked = allIds.every((id) => selected.has(id));
+            },
+          });
           return el('tr', {}, [
+            el('td', {}, [chk]),
             el('td', { text: p.name }),
             el('td', {}, [c ? el('span', { class: 'badge', style: { background: c.color } }, [`${c.emoji} ${c.name}`]) : '—']),
             el('td', { text: p.country || '—' }),
@@ -183,7 +271,6 @@ export function renderPoiTable(container, { master, onChange }) {
   let mapInstance = null;
   function buildMap() {
     const div = el('div', { class: 'admin-map', id: 'admin-map' });
-    // create after it is in the DOM
     setTimeout(() => {
       mapInstance?.remove();
       mapInstance = L.map(div).setView([-8.4, 115.2], 5);
@@ -226,6 +313,9 @@ export function renderPoiTable(container, { master, onChange }) {
       el('button', { text: t('admin.pois.viewMap'), 'aria-pressed': state.view === 'map' ? 'true' : 'false', onclick: () => ((state.view = 'map'), render()) }),
     ]);
 
+    deleteBtn = el('button', { class: 'btn btn--danger', onclick: deleteSelected });
+    const exportBtn = el('button', { class: 'btn', text: t('admin.pois.export'), onclick: exportCsv });
+
     const body = el('div', {}, [
       master.pois.length === 0 ? el('p', { class: 'muted', text: t('admin.pois.empty') }) : state.view === 'table' ? buildTable() : buildMap(),
     ]);
@@ -235,15 +325,18 @@ export function renderPoiTable(container, { master, onChange }) {
       el('p', { class: 'panel__hint', text: t('admin.pois.hint') }),
       el('div', { class: 'toolbar' }, [
         el('button', { class: 'btn btn--primary', text: t('admin.pois.add'), onclick: () => openForm(null) }),
+        deleteBtn,
         searchInput,
         catSel,
         countrySel,
         el('div', { class: 'appbar__spacer' }),
+        exportBtn,
         viewToggle,
       ]),
       body,
     ]);
     mount(container, panel);
+    updateBulkUI();
   }
 
   render();
