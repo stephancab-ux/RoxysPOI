@@ -11,11 +11,11 @@ import { BRAND, LANGUAGES } from './config.js';
 import { initTheme, getTheme, setTheme, logoForTheme } from './ui/theme.js';
 import { initI18n, setLang, getLang, t, applyTranslations, onLangChange } from './ui/i18n.js';
 import { el, clear, toast, openDrawer, pickFile } from './ui/components.js';
-import { loadDataset, loadItinerary, clearItinerary, getSetting, setSetting } from './data/db.js';
+import { loadDataset, loadItinerary, getSetting, setSetting } from './data/db.js';
 import { isExpired, categoryName, validateClientFile } from './data/schema.js';
 import { loadContent, getContent, pickLang, resolveText, resolveEmail } from './data/content.js';
-import { importClientFile, importItineraryFile } from './data/clientFile.js';
-import { itineraryPoints } from './data/itinerary.js';
+import { importTravelFile } from './data/clientFile.js';
+import { itineraryPoints, validateItinerary } from './data/itinerary.js';
 import { createMap, createLocator, fitToPoints } from './map/mapCore.js';
 import { BaseLayers } from './map/baseLayers.js';
 import { createClusterGroup } from './map/clusters.js';
@@ -63,31 +63,32 @@ function renderWelcome() {
       langRow,
     ]),
     welcomeIntroEl(),
-    el('div', { class: 'welcome__actions' }, [importButton('places'), importButton('itinerary')]),
+    el('div', { class: 'welcome__actions' }, [importButton()]),
   ]);
   clear(root).append(view);
   applyTranslations(view);
 }
 
-/** A welcome-screen import button for either the places file or the itinerary. */
-function importButton(kind) {
-  const labelKey = kind === 'itinerary' ? 'welcome.importItinerary' : 'welcome.import';
+/**
+ * The single welcome-screen import button. One document now: it auto-detects a
+ * recommendation list, a trip itinerary, or the combined file from Roxy admin.
+ */
+function importButton() {
   const btn = el('button', {
-    class: kind === 'itinerary' ? 'btn btn--ghost' : 'btn btn--primary',
-    'data-i18n': labelKey,
+    class: 'btn btn--primary',
+    'data-i18n': 'welcome.importPlan',
     onclick: async () => {
       const file = await pickFile('.json,application/json');
       if (!file) return;
       btn.disabled = true;
       btn.textContent = t('welcome.importing');
-      const importFn = kind === 'itinerary' ? importItineraryFile : importClientFile;
-      const { ok, errors } = await importFn(file);
+      const { ok, errors } = await importTravelFile(file);
       if (ok) {
         await showFromStorage();
       } else {
         toast(errors[0] || t('welcome.badFile'), 'error');
         btn.disabled = false;
-        btn.textContent = t(labelKey);
+        btn.textContent = t('welcome.importPlan');
       }
     },
   });
@@ -299,39 +300,18 @@ async function openSettings(dataset, itinerary, baseLayers) {
   // Offline maps
   body.append(await buildOfflineSection(dataset || { points: [], client: '' }, baseLayers));
 
-  // Your travel file (places)
+  // Your travel plan — one document now (recommendation list and/or route).
+  // Importing a new file REPLACES whatever is loaded (see importTravelFile).
+  const planRows = [el('h3', { 'data-i18n': 'settings.plan' })];
   if (hasPlaces) {
-    body.append(
-      el('div', { class: 'section' }, [
-        el('h3', { 'data-i18n': 'settings.data' }),
-        el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.client')}: ${dataset.client || '—'}` })]),
-        dataset.validUntil && el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.validUntil')}: ${dataset.validUntil}` })]),
-        el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.reimport', onclick: () => replaceFile() }),
-      ].filter(Boolean))
-    );
-  } else {
-    body.append(
-      el('div', { class: 'section' }, [
-        el('h3', { 'data-i18n': 'settings.data' }),
-        el('button', { class: 'btn btn--ghost', 'data-i18n': 'welcome.import', onclick: () => replaceFile() }),
-      ])
-    );
+    planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.client')}: ${dataset.client || '—'}` })]));
+    if (dataset.validUntil) planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.validUntil')}: ${dataset.validUntil}` })]));
   }
-
-  // Your itinerary (route)
-  const itinSection = el('div', { class: 'section' }, [el('h3', { 'data-i18n': 'settings.itinerary' })]);
   if (itinerary) {
-    itinSection.append(
-      el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.route')}: ${itinerary.title || '—'} · ${t('settings.stops', { n: (itinerary.stops || []).length })}` })]),
-      el('div', { class: 'row' }, [
-        el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.reimportItinerary', onclick: () => importItinerary() }),
-        el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.removeItinerary', onclick: async () => { await clearItinerary(); location.reload(); } }),
-      ])
-    );
-  } else {
-    itinSection.append(el('button', { class: 'btn btn--ghost', 'data-i18n': 'welcome.importItinerary', onclick: () => importItinerary() }));
+    planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.route')}: ${itinerary.title || '—'} · ${t('settings.stops', { n: (itinerary.stops || []).length })}` })]));
   }
-  body.append(itinSection);
+  planRows.push(el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.replacePlan', onclick: () => replaceFile() }));
+  body.append(el('div', { class: 'section' }, planRows));
 
   // Disclaimer (re-readable) at the bottom.
   const disclaimer = resolveText('disclaimer', getLang(), dataset);
@@ -349,14 +329,7 @@ async function openSettings(dataset, itinerary, baseLayers) {
 async function replaceFile() {
   const file = await pickFile('.json,application/json');
   if (!file) return;
-  const { ok, errors } = await importClientFile(file);
-  if (ok) location.reload();
-  else toast(errors[0] || t('welcome.badFile'), 'error');
-}
-async function importItinerary() {
-  const file = await pickFile('.json,application/json');
-  if (!file) return;
-  const { ok, errors } = await importItineraryFile(file);
+  const { ok, errors } = await importTravelFile(file);
   if (ok) location.reload();
   else toast(errors[0] || t('welcome.badFile'), 'error');
 }
@@ -440,7 +413,9 @@ async function main() {
   const embed = embedDataset();
   if (embed) {
     document.documentElement.classList.add('embed');
-    renderMap(embed, null); // embedded map: skip welcome/import and the expiry lock
+    // The iframe payload may carry the route too (combined file) — render both.
+    const itin = embed.itinerary ? validateItinerary(embed.itinerary) : null;
+    renderMap(embed, itin && itin.ok ? itin.data : null); // embedded map: skip welcome/import and the expiry lock
     return;
   }
   await showFromStorage();

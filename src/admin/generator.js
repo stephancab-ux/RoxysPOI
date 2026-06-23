@@ -4,10 +4,11 @@
 // buffered bbox per country for the agency's PMTiles offline-pack command.
 // =============================================================================
 
-import { el, mount, toast, openModal } from '../ui/components.js';
+import { el, mount, toast, openModal, pickFile } from '../ui/components.js';
 import { t } from '../ui/i18n.js';
 import { CLIENT_APP_URL, BASE_URL } from '../config.js';
 import { hasCoords, countriesOf } from '../data/schema.js';
+import { validateItinerary } from '../data/itinerary.js';
 import { bufferedBbox, formatBbox } from '../geo/bbox.js';
 import { packFileName } from '../offline/packs.js';
 import { buildStandaloneHtml, buildIframeEmbed, buildKml, buildBrandedHtml } from './exporters.js';
@@ -35,7 +36,10 @@ function logoDataUri() {
 
 export function renderGenerator(container, { master }) {
   const allCountries = countriesOf(master.pois);
-  const sel = { client: '', countries: new Set(allCountries), cats: new Set(master.categories.map((c) => c.id)), from: '', until: '' };
+  // `itineraryRaw` = the raw CRM JSON (baked into the file as-is); `itinerary` =
+  // its normalized form (for the on-screen summary). Optional — a list-only file
+  // is still valid.
+  const sel = { client: '', countries: new Set(allCountries), cats: new Set(master.categories.map((c) => c.id)), from: '', until: '', itineraryRaw: null, itinerary: null };
 
   function selectedPoints() {
     return master.pois.filter((p) => hasCoords(p) && sel.countries.has(p.country) && sel.cats.has(p.categoryId));
@@ -97,7 +101,8 @@ export function renderGenerator(container, { master }) {
     const usedCats = new Set(points.map((p) => p.categoryId));
     const categories = master.categories.filter((c) => usedCats.has(c.id));
     // Bake the current agency texts (welcome/expiry/email/disclaimer) into the file.
-    return { client: sel.client.trim(), validFrom: sel.from, validUntil: sel.until, categories, points, content: master.content || null };
+    // `itinerary` carries the raw CRM route (or null) so the client renders both.
+    return { client: sel.client.trim(), validFrom: sel.from, validUntil: sel.until, categories, points, content: master.content || null, itinerary: sel.itineraryRaw || null };
   }
   const slug = () => sel.client.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
 
@@ -129,6 +134,29 @@ export function renderGenerator(container, { master }) {
     saveOutput('Recommendation pages', `${slug()}-recommendation.html`, html, 'text/html');
   }
 
+  // Upload the CRM itinerary JSON to bundle alongside the recommendation list.
+  // Validated for the summary; the raw object is what gets baked into the file.
+  async function uploadItinerary() {
+    const file = await pickFile('.json,application/json');
+    if (!file) return;
+    let raw;
+    try {
+      raw = JSON.parse(await file.text());
+    } catch {
+      return toast(t('admin.gen.itineraryBad'), 'error');
+    }
+    const result = validateItinerary(raw);
+    if (!result.ok) return toast(result.errors[0] || t('admin.gen.itineraryBad'), 'error');
+    sel.itineraryRaw = raw;
+    sel.itinerary = result.data;
+    render();
+  }
+  function removeItinerary() {
+    sel.itineraryRaw = null;
+    sel.itinerary = null;
+    render();
+  }
+
   // Modal with copy-to-clipboard (and optional file download) for embed code.
   function showEmbed(title, code, downloadName, mime, subfolder) {
     const ta = el('textarea', { rows: 7, readonly: '', style: { width: '100%', fontFamily: 'monospace', fontSize: '.78rem' } });
@@ -156,6 +184,20 @@ export function renderGenerator(container, { master }) {
     const from = el('input', { type: 'date', value: sel.from, onchange: (e) => (sel.from = e.target.value) });
     const until = el('input', { type: 'date', value: sel.until, onchange: (e) => (sel.until = e.target.value) });
 
+    // Third column: upload the CRM itinerary JSON to bundle into every export.
+    const itinSection = el('div', { class: 'section' }, [
+      el('h3', { text: t('admin.gen.itinerary') }),
+      sel.itinerary
+        ? el('div', { class: 'stack' }, [
+            el('p', { class: 'muted', text: t('admin.gen.itineraryLoaded', { title: sel.itinerary.title || '—', stops: (sel.itinerary.stops || []).length }) }),
+            el('button', { class: 'btn btn--sm btn--ghost', text: t('admin.gen.itineraryRemove'), onclick: removeItinerary }),
+          ])
+        : el('div', { class: 'stack' }, [
+            el('p', { class: 'panel__hint', text: t('admin.gen.itineraryHint') }),
+            el('button', { class: 'btn btn--sm', text: t('admin.gen.itineraryUpload'), onclick: uploadItinerary }),
+          ]),
+    ]);
+
     const panel = el('div', { class: 'panel' }, [
       el('h1', { text: t('admin.gen.title') }),
       el('p', { class: 'panel__hint', text: t('admin.gen.hint') }),
@@ -163,6 +205,7 @@ export function renderGenerator(container, { master }) {
       el('div', { class: 'grid2' }, [
         el('div', { class: 'section' }, [el('h3', { text: t('admin.gen.countries') }), checklist(allCountries.map((c) => ({ value: c })), sel.countries, (it) => it.value, updateSummary)]),
         el('div', { class: 'section' }, [el('h3', { text: t('admin.gen.categories') }), checklist(master.categories.map((c) => ({ value: c.id, c })), sel.cats, (it) => `${it.c.emoji} ${it.c.name}`, updateSummary)]),
+        itinSection,
       ]),
       el('div', { class: 'grid2' }, [
         el('div', { class: 'field' }, [el('label', { text: t('admin.gen.from') }), from]),

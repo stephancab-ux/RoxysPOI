@@ -7,6 +7,8 @@
 //   • buildKml             — KML for Google My Maps (a folder per category).
 // =============================================================================
 
+import { validateItinerary } from '../data/itinerary.js';
+
 const xml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
 
 /** Base64url-encode a JSON-able object for safe inclusion in a URL fragment. */
@@ -15,11 +17,77 @@ export function encodeData(obj) {
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+/** Normalize a file's optional raw CRM itinerary, or null. */
+function itineraryOf(file) {
+  if (!file.itinerary) return null;
+  const r = validateItinerary(file.itinerary);
+  return r.ok ? r.data : null;
+}
+
+// ---- Inline itinerary renderer (shared by the standalone + branded HTML) -----
+// Transport mode → badge emoji + line dash (compact port of the client's
+// itineraryLayer MODES).
+const ITIN_MODES = {
+  car: { emoji: '🚗' }, taxi: { emoji: '🚕' }, bus: { emoji: '🚌' }, shuttle: { emoji: '🚐' }, van: { emoji: '🚐' },
+  train: { emoji: '🚆' }, bike: { emoji: '🚲' }, cycling: { emoji: '🚲' },
+  walk: { emoji: '🚶', dash: '1 9' }, walking: { emoji: '🚶', dash: '1 9' }, hike: { emoji: '🥾', dash: '1 9' }, trekking: { emoji: '🥾', dash: '1 9' },
+  'horse riding': { emoji: '🐴', dash: '8 8' }, horse: { emoji: '🐴', dash: '8 8' },
+  flight: { emoji: '✈️', dash: '2 10' }, plane: { emoji: '✈️', dash: '2 10' }, boat: { emoji: '⛴️', dash: '2 10' }, ferry: { emoji: '⛴️', dash: '2 10' },
+};
+
+// CSS for the itinerary markers (numbered stops, annotation/mode pins), ported
+// from src/styles/map.css so each exported page stays self-contained.
+const ITIN_CSS = `
+  .rx-stop{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.92);box-shadow:0 3px 6px rgba(0,0,0,.4)}
+  .rx-stop span{transform:rotate(45deg);color:#fff;font-weight:700;font-size:.82rem;line-height:1}
+  .rx-anno,.rx-mode{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#fff;line-height:1}
+  .rx-anno{width:28px;height:28px;border:2px solid #e11d48;box-shadow:0 2px 5px rgba(0,0,0,.35);font-size:15px}
+  .rx-mode{width:24px;height:24px;border:2px solid #15803d;box-shadow:0 1px 4px rgba(0,0,0,.35);font-size:13px}`;
+
+// JS that draws `D.itin` (a normalized itinerary) on `map` and records its
+// coordinates in window.__itinPts so the caller's fitBounds can include them.
+// Relies on `L`, `map` and an `esc()` helper already present on the page.
+const ITIN_JS = `
+if(D.itin){(function(IT){
+  var MODES=${JSON.stringify(ITIN_MODES)};
+  function modeInfo(m){m=(m||'').toLowerCase().trim();if(MODES[m])return MODES[m];if(/fly|flight|air|plane/.test(m))return{emoji:'✈️',dash:'2 10'};if(/boat|ferry|ship|sea/.test(m))return{emoji:'⛴️',dash:'2 10'};if(/walk|foot|hik/.test(m))return{emoji:'🚶',dash:'1 9'};return{emoji:'➡️'};}
+  var byId={};(IT.stops||[]).forEach(function(s){byId[s.id]=s;});
+  var ipts=[];
+  (IT.legs||[]).forEach(function(leg){
+    var from=byId[leg.from],to=byId[leg.to],info=modeInfo(leg.mode),pts=[];
+    if(from)pts.push([from.lat,from.lng]);
+    (leg.waypoints||[]).forEach(function(w){pts.push([w.lat,w.lng]);});
+    if(to)pts.push([to.lat,to.lng]);
+    if(pts.length<2)return;
+    var line=L.polyline(pts,{color:'#15803d',weight:4,opacity:.9,dashArray:info.dash,lineJoin:'round',lineCap:'round'});
+    var lbl=(info.emoji+' '+esc(leg.mode||'')+(leg.note?' — '+esc(leg.note):'')).trim();
+    if(lbl)line.bindPopup(lbl);
+    line.addTo(map);
+    pts.forEach(function(p){ipts.push(p);});
+    var mid=pts[Math.floor(pts.length/2)];
+    L.marker(mid,{icon:L.divIcon({className:'',html:'<div class=rx-mode>'+info.emoji+'</div>',iconSize:[24,24],iconAnchor:[12,12]}),interactive:false,keyboard:false}).addTo(map);
+  });
+  (IT.stops||[]).forEach(function(s,i){
+    var n=(typeof s.order==='number')?s.order+1:i+1;
+    var mk=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'',html:'<div class="rx-stop" style="background:'+(s.color||'#c2410c')+'"><span>'+n+'</span></div>',iconSize:[30,38],iconAnchor:[15,38],popupAnchor:[0,-34]}),zIndexOffset:500});
+    mk.bindPopup('<div class=rx-pop><b>'+esc(s.name||('Stop '+n))+'</b>'+(s.note?'<br>'+esc(s.note):'')+'</div>');
+    mk.addTo(map);ipts.push([s.lat,s.lng]);
+  });
+  (IT.annotations||[]).forEach(function(a){
+    (a.points||[]).forEach(function(p){
+      var mk=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class="rx-anno" style="border-color:'+(a.color||'#e11d48')+'">'+(a.emoji||'📍')+'</div>',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-14]})});
+      if(a.label)mk.bindPopup('<div class=rx-pop><b>'+esc(a.label)+'</b></div>');
+      mk.addTo(map);ipts.push([p.lat,p.lng]);
+    });
+  });
+  window.__itinPts=ipts;
+})(D.itin);}`;
+
 // ---- Standalone HTML (self-contained map) -----------------------------------
 export function buildStandaloneHtml(file) {
   const cats = {};
   for (const c of file.categories || []) cats[c.id] = { name: c.name, emoji: c.emoji, color: c.color };
-  const data = { cats, points: (file.points || []).filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number') };
+  const data = { cats, points: (file.points || []).filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number'), itin: itineraryOf(file) };
   // Escape "<" so a note containing "</script>" can't break out of the inline data.
   const json = JSON.stringify(data).replace(/</g, '\\u003c');
   const title = xml(file.client || 'Roxys Travel Plan');
@@ -34,7 +102,7 @@ export function buildStandaloneHtml(file) {
   #map{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
   .rx-pin{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.4);font-size:15px}
   .rx-cl{width:40px;height:40px;border-radius:50%;background:#B8902F;border:3px solid #d8b24a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.4)}
-  .rx-pop b{font-size:1.02rem}.rx-pop a{color:#B8902F;font-weight:600}
+  .rx-pop b{font-size:1.02rem}.rx-pop a{color:#B8902F;font-weight:600}${ITIN_CSS}
 </style></head><body>
 <div id="map"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -53,7 +121,9 @@ D.points.forEach(function(p){
   m.bindPopup(h);cluster.addLayer(m);
 });
 map.addLayer(cluster);
-if(D.points.length){map.fitBounds(L.latLngBounds(D.points.map(function(p){return[p.lat,p.lng];})).pad(0.15));}else{map.setView([20,0],2);}
+${ITIN_JS}
+var allPts=D.points.map(function(p){return[p.lat,p.lng];}).concat(window.__itinPts||[]);
+if(allPts.length){map.fitBounds(L.latLngBounds(allPts).pad(0.15));}else{map.setView([20,0],2);}
 </script>
 </body></html>`;
 }
@@ -65,7 +135,7 @@ export function buildBrandedHtml(file, { logoDataUri = '' } = {}) {
   const cats = {};
   for (const c of file.categories || []) cats[c.id] = { name: c.name, emoji: c.emoji, color: c.color };
   const points = (file.points || []).filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number');
-  const json = JSON.stringify({ cats, points }).replace(/</g, '\\u003c');
+  const json = JSON.stringify({ cats, points, itin: itineraryOf(file) }).replace(/</g, '\\u003c');
   const title = xml(file.client || 'Roxys Travel Plan');
   const nCountries = new Set(points.map((p) => p.country).filter(Boolean)).size;
   const nCats = (file.categories || []).length;
@@ -107,7 +177,7 @@ export function buildBrandedHtml(file, { logoDataUri = '' } = {}) {
   .footer-name{font-family:'Georgia','Times New Roman',serif;color:var(--gold);font-weight:700}
   .rx-pin{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.4);font-size:15px}
   .rx-cl{width:40px;height:40px;border-radius:50%;background:var(--gold);border:3px solid #d8b24a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.4)}
-  .rx-pop b{font-size:1.02rem}.rx-pop a{color:var(--gold);font-weight:600}
+  .rx-pop b{font-size:1.02rem}.rx-pop a{color:var(--gold);font-weight:600}${ITIN_CSS}
 </style></head><body>
 <header class="page-header"><div class="page-wrap header-row">
   <div class="brand">${brand}<div><div class="brand-name">Roxys Travel Plan</div><div class="brand-motto">Your expert for unique adventure</div></div></div>
@@ -136,7 +206,9 @@ D.points.forEach(function(p){
   m.bindPopup(h);cluster.addLayer(m);
 });
 map.addLayer(cluster);
-if(D.points.length){map.fitBounds(L.latLngBounds(D.points.map(function(p){return[p.lat,p.lng];})).pad(0.15));}else{map.setView([20,0],2);}
+${ITIN_JS}
+var allPts=D.points.map(function(p){return[p.lat,p.lng];}).concat(window.__itinPts||[]);
+if(allPts.length){map.fitBounds(L.latLngBounds(allPts).pad(0.15));}else{map.setView([20,0],2);}
 setTimeout(function(){map.invalidateSize();},200);
 </script>
 </body></html>`;
@@ -177,8 +249,42 @@ export function buildKml(file) {
     })
     .join('');
   const orphans = pts.filter((p) => !cats.some((c) => c.id === p.categoryId)).map((p) => placemark(p, null)).join('');
+  // Optional itinerary: its own folder with stops, leg lines and annotations.
+  const itin = itineraryOf(file);
+  const itinStyles = itin
+    ? `<Style id="itin-line"><LineStyle><color>${kmlColor('#15803d')}</color><width>4</width></LineStyle></Style><Style id="itin-stop"><IconStyle><color>${kmlColor('#c2410c')}</color><Icon><href>http://maps.google.com/mapfiles/kml/paddle/blank.png</href></Icon></IconStyle></Style>`
+    : '';
+  const itinFolder = itin ? itineraryKml(itin) : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${xml(file.client || 'Roxys Travel Plan')}</name>${styles}${folders}${orphans}</Document></kml>`;
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${xml(file.client || 'Roxys Travel Plan')}</name>${styles}${itinStyles}${folders}${orphans}${itinFolder}</Document></kml>`;
+}
+
+// Itinerary as a KML folder: a placemark per numbered stop, a LineString per leg
+// (following waypoints when present), and a placemark per annotation point.
+function itineraryKml(it) {
+  const byId = new Map((it.stops || []).map((s) => [s.id, s]));
+  const stops = (it.stops || [])
+    .map((s, i) => {
+      const n = Number.isFinite(s.order) ? s.order + 1 : i + 1;
+      const desc = s.note ? `<description><![CDATA[${xml(s.note)}]]></description>` : '';
+      return `<Placemark><name>${n}. ${xml(s.name || `Stop ${n}`)}</name>${desc}<styleUrl>#itin-stop</styleUrl><Point><coordinates>${s.lng},${s.lat},0</coordinates></Point></Placemark>`;
+    })
+    .join('');
+  const lines = (it.legs || [])
+    .map((l) => {
+      const from = byId.get(l.from);
+      const to = byId.get(l.to);
+      const coords = [from && [from.lng, from.lat], ...(l.waypoints || []).map((w) => [w.lng, w.lat]), to && [to.lng, to.lat]].filter(Boolean);
+      if (coords.length < 2) return '';
+      const path = coords.map((c) => `${c[0]},${c[1]},0`).join(' ');
+      const nm = `${l.mode || 'Leg'}${l.note ? ` — ${l.note}` : ''}`;
+      return `<Placemark><name>${xml(nm)}</name><styleUrl>#itin-line</styleUrl><LineString><tessellate>1</tessellate><coordinates>${path}</coordinates></LineString></Placemark>`;
+    })
+    .join('');
+  const annos = (it.annotations || [])
+    .flatMap((a) => (a.points || []).map((p) => `<Placemark><name>${xml(`${a.emoji || '📍'} ${a.label || ''}`.trim())}</name><Point><coordinates>${p.lng},${p.lat},0</coordinates></Point></Placemark>`))
+    .join('');
+  return `<Folder><name>🧭 ${xml(it.title || 'Itinerary')}</name>${lines}${stops}${annos}</Folder>`;
 }
 
 function placemark(p, catId) {

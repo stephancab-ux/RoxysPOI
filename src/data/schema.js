@@ -2,6 +2,8 @@
 // Data model: type definitions, id generation, validation & normalisation.
 // =============================================================================
 
+import { isItineraryShape } from './itinerary.js';
+
 /**
  * @typedef {Object} POI
  * @property {string} id          stable unique id
@@ -117,6 +119,9 @@ export function validateClientFile(obj) {
     points,
     // Baked-in agency texts (welcome/expiry/email/disclaimer) travel with the file.
     content: obj.content && typeof obj.content === 'object' ? obj.content : null,
+    // Optional combined-file payload: the raw CRM itinerary, re-validated on use
+    // by validateItinerary() so the route renders alongside the recommendation list.
+    itinerary: obj.itinerary && isItineraryShape(obj.itinerary) ? obj.itinerary : null,
   };
   return { ok: true, errors: [], data };
 }
