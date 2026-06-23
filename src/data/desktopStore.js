@@ -39,6 +39,36 @@ async function setLastSavedAt(ts) {
   await s.save();
 }
 
+// Folder where generated documents (client files, KML, website embeds, CSV) land.
+export async function getDocumentsFolder() {
+  return (await (await store()).get('documentsFolder')) || null;
+}
+export async function setDocumentsFolder(path) {
+  const s = await store();
+  await s.set('documentsFolder', path);
+  await s.save();
+}
+/** Pick a folder (for the documents location). */
+export function pickFolder() {
+  return open({ title: 'Choose your documents folder', directory: true, multiple: false });
+}
+
+/** Write arbitrary text to an exact path (for a one-off "save as"). */
+export async function writeTextAt(path, contents) {
+  await invoke('write_text', { path, contents });
+  return path;
+}
+
+/**
+ * Save a generated document into the configured documents folder under
+ * `subfolder/filename`. Returns the full path, or null if no folder is set.
+ */
+export async function saveDocument(subfolder, filename, contents) {
+  const folder = await getDocumentsFolder();
+  if (!folder) return null;
+  return invoke('save_document', { folder, subfolder, filename, contents });
+}
+
 // ---- File operations (via Rust commands) ------------------------------------
 export function fileExists(path) {
   return invoke('path_exists', { path });

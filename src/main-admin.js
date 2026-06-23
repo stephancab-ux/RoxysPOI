@@ -35,6 +35,7 @@ let ds = null; // lazily-imported ./data/desktopStore.js (Tauri APIs)
 let appWindow = null; // Tauri window handle (for the close guard)
 let masterPath = null; // bound file path on this computer
 let lastSavedAt = null; // epoch ms of the last successful file save
+let documentsFolder = null; // folder where generated client files are saved
 
 const fmtTime = (ts) => (ts ? new Date(ts).toLocaleString() : '—');
 
@@ -217,6 +218,38 @@ async function desktopExportCopy() {
   }
 }
 
+/** Import another list into the current one — Merge (upsert) or Replace. */
+async function desktopImport(mode) {
+  const path = await ds.pickOpenLocation();
+  if (!path) return;
+  try {
+    const incoming = normalizeMaster(await ds.readMasterFile(path));
+    if (mode === 'replace') {
+      master.categories = incoming.categories;
+      master.pois = incoming.pois;
+      if (incoming.content) master.content = incoming.content;
+      toast(t('admin.desktop.imported'), 'ok');
+    } else {
+      master.categories = mergeCategories(master.categories, incoming.categories);
+      const { added, updated } = upsertPois(master.pois, incoming.pois);
+      toast(t('admin.import.merged', { added, updated }), 'ok');
+    }
+    await persistMaster(master); // marks unsaved → user clicks Save to write the file
+    renderApp();
+  } catch {
+    toast(t('admin.desktop.readError'), 'error');
+  }
+}
+
+/** Choose the folder where generated client files (JSON/KML/HTML/CSV) are saved. */
+async function pickDocumentsFolder() {
+  const path = await ds.pickFolder();
+  if (!path) return;
+  documentsFolder = path;
+  await ds.setDocumentsFolder(path);
+  if (currentTab === 'data') renderTab();
+}
+
 const withContent = (m) => (m.content ? m : ((m.content = normalizeContent({})), m));
 
 // First-run screen: no file bound yet → open an existing list or start a new one.
@@ -341,6 +374,22 @@ function renderDesktopDataPanel(container) {
     },
   });
 
+  const importMode = el('select', { style: { width: 'auto' } }, [
+    el('option', { value: 'merge' }, [t('admin.desktop.merge')]),
+    el('option', { value: 'replace' }, [t('admin.desktop.replace')]),
+  ]);
+
+  const docsInput = el('input', {
+    type: 'text',
+    value: documentsFolder || '',
+    placeholder: t('admin.docs.placeholder'),
+    style: { fontFamily: 'monospace', fontSize: '.82rem' },
+    onchange: async (e) => {
+      documentsFolder = e.target.value.trim() || null;
+      if (documentsFolder) await ds.setDocumentsFolder(documentsFolder);
+    },
+  });
+
   const panel = el('div', { class: 'panel' }, [
     el('h1', { text: t('admin.data.title') }),
     el('p', { class: 'panel__hint', text: t('admin.desktop.hint') }),
@@ -360,6 +409,21 @@ function renderDesktopDataPanel(container) {
         desktopStartNew();
       } }),
     ]),
+
+    // Import another list (Merge / Replace).
+    el('div', { class: 'section' }, [
+      el('h3', { text: t('admin.desktop.importTitle') }),
+      el('p', { class: 'muted', text: t('admin.desktop.importHint') }),
+      el('div', { class: 'row' }, [importMode, el('button', { class: 'btn', text: t('admin.desktop.importBtn'), onclick: () => desktopImport(importMode.value) })]),
+    ]),
+
+    // Documents folder for generated client files (JSON/KML/HTML/CSV).
+    el('div', { class: 'section' }, [
+      el('h3', { text: t('admin.docs.title') }),
+      el('p', { class: 'muted', text: t('admin.docs.hint') }),
+      el('div', { class: 'row' }, [docsInput, el('button', { class: 'btn btn--sm', text: t('admin.docs.browse'), onclick: pickDocumentsFolder })]),
+      documentsFolder ? null : el('p', { class: 'muted', text: t('admin.docs.none') }),
+    ].filter(Boolean)),
   ]);
   mount(container, panel);
 }
@@ -377,6 +441,7 @@ async function bootDesktop() {
   onDirtyChange(updateSaveIndicator);
   masterPath = await ds.getMasterPath();
   lastSavedAt = await ds.getLastSavedAt();
+  documentsFolder = await ds.getDocumentsFolder();
   if (masterPath && (await ds.fileExists(masterPath).catch(() => false))) {
     try {
       master = withContent(normalizeMaster(await ds.readMasterFile(masterPath)));

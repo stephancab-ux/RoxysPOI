@@ -218,5 +218,20 @@
   "admin.desktop.browse": "Parcourir…",
   "admin.desktop.reload": "Recharger depuis le disque",
   "admin.desktop.openOther": "Ouvrir un autre fichier…",
-  "admin.desktop.exportCopy": "Exporter une copie…"
+  "admin.desktop.exportCopy": "Exporter une copie…",
+
+  "admin.desktop.importTitle": "Importer une autre liste",
+  "admin.desktop.importHint": "Intégrez les points d'un autre fichier de liste Roxys dans celui-ci.",
+  "admin.desktop.merge": "Fusionner avec l'actuelle",
+  "admin.desktop.replace": "Remplacer l'actuelle",
+  "admin.desktop.importBtn": "Importer…",
+  "admin.desktop.imported": "Importé.",
+
+  "admin.docs.title": "Stockage des documents",
+  "admin.docs.hint": "Les fichiers client générés (fichier de voyage, KML, carte web, CSV) sont enregistrés ici, dans des sous-dossiers. Pointez vers un dossier Google Drive / OneDrive pour les synchroniser entre vos machines.",
+  "admin.docs.browse": "Changer de dossier",
+  "admin.docs.placeholder": "…/Google Drive/Roxys/Documents",
+  "admin.docs.none": "Non défini — il vous sera demandé où enregistrer chaque fichier tant que vous n'aurez pas choisi de dossier.",
+  "admin.docs.savedTo": "Enregistré dans {path}",
+  "admin.docs.downloaded": "Téléchargé."
 }

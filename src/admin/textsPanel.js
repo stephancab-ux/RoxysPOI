@@ -7,7 +7,8 @@
 import { el, mount, toast } from '../ui/components.js';
 import { t } from '../ui/i18n.js';
 import { LANGUAGES } from '../config.js';
-import { persistMaster, exportContent } from '../data/master.js';
+import { persistMaster } from '../data/master.js';
+import { saveOutput } from './saveOutput.js';
 
 export function renderTextsPanel(container, { master }) {
   if (!master.content) {
@@ -42,7 +43,7 @@ export function renderTextsPanel(container, { master }) {
       toast(t('admin.texts.saved'), 'ok');
     },
   });
-  const exportBtn = el('button', { class: 'btn', text: t('admin.texts.export'), onclick: () => exportContent(master) });
+  const exportBtn = el('button', { class: 'btn', text: t('admin.texts.export'), onclick: () => saveOutput('Exports', 'content.json', JSON.stringify(master.content, null, 2), 'application/json') });
 
   const panel = el('div', { class: 'panel' }, [
     el('h1', { text: t('admin.texts.title') }),

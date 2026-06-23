@@ -41,6 +41,17 @@ fn write_backup(master_path: String, contents: String, stamp: String) -> Result<
     Ok(dest.to_string_lossy().to_string())
 }
 
+/// Save a generated document into `<folder>/<subfolder>/<filename>` (creating
+/// the subfolder if needed). Returns the full path it was written to.
+#[tauri::command]
+fn save_document(folder: String, subfolder: String, filename: String, contents: String) -> Result<String, String> {
+    let dir = Path::new(&folder).join(&subfolder);
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let dest = dir.join(&filename);
+    fs::write(&dest, contents).map_err(|e| e.to_string())?;
+    Ok(dest.to_string_lossy().to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -49,7 +60,8 @@ fn main() {
             path_exists,
             read_text,
             write_text,
-            write_backup
+            write_backup,
+            save_document
         ])
         .run(tauri::generate_context!())
         .expect("error while running Roxys Admin");

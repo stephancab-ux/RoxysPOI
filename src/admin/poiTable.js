@@ -5,7 +5,8 @@
 
 import L from 'leaflet';
 import Papa from 'papaparse';
-import { el, mount, openModal, confirmDialog, toast, downloadFile } from '../ui/components.js';
+import { el, mount, openModal, confirmDialog, toast } from '../ui/components.js';
+import { saveOutput } from './saveOutput.js';
 import { t } from '../ui/i18n.js';
 import { genId, hasCoords, countriesOf } from '../data/schema.js';
 import { persistMaster } from '../data/master.js';
@@ -77,7 +78,7 @@ export function renderPoiTable(container, { master, onChange }) {
       placeId: p.placeId || '',
     }));
     // Prepend a UTF-8 BOM so Excel opens accented / non-Latin names correctly.
-    downloadFile('roxys-points.csv', '﻿' + Papa.unparse(rows), 'text/csv;charset=utf-8');
+    saveOutput('CSV exports', 'roxys-points.csv', '﻿' + Papa.unparse(rows), 'text/csv;charset=utf-8');
   }
 
   // ---- Edit / add form -------------------------------------------------------

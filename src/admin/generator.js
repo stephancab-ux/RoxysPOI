@@ -4,13 +4,14 @@
 // buffered bbox per country for the agency's PMTiles offline-pack command.
 // =============================================================================
 
-import { el, mount, downloadFile, toast, openModal } from '../ui/components.js';
+import { el, mount, toast, openModal } from '../ui/components.js';
 import { t } from '../ui/i18n.js';
 import { CLIENT_APP_URL } from '../config.js';
 import { hasCoords, countriesOf } from '../data/schema.js';
 import { bufferedBbox, formatBbox } from '../geo/bbox.js';
 import { packFileName } from '../offline/packs.js';
 import { buildStandaloneHtml, buildIframeEmbed, buildKml } from './exporters.js';
+import { saveOutput } from './saveOutput.js';
 
 export function renderGenerator(container, { master }) {
   const allCountries = countriesOf(master.pois);
@@ -82,13 +83,12 @@ export function renderGenerator(container, { master }) {
   function downloadJson() {
     const f = buildFile();
     if (!f) return;
-    downloadFile(`${slug()}-roxys-travel.json`, JSON.stringify(f, null, 2));
-    toast(t('admin.gen.done'), 'ok');
+    saveOutput('Client files', `${slug()}-roxys-travel.json`, JSON.stringify(f, null, 2), 'application/json');
   }
   function downloadHtmlEmbed() {
     const f = buildFile();
     if (!f) return;
-    showEmbed(t('admin.gen.htmlTitle'), buildStandaloneHtml(f), `${slug()}-map.html`, 'text/html');
+    showEmbed(t('admin.gen.htmlTitle'), buildStandaloneHtml(f), `${slug()}-map.html`, 'text/html', 'Website embeds');
   }
   function copyIframeEmbed() {
     const f = buildFile();
@@ -99,16 +99,15 @@ export function renderGenerator(container, { master }) {
   function downloadKmlFile() {
     const f = buildFile();
     if (!f) return;
-    downloadFile(`${slug()}-roxys.kml`, buildKml(f), 'application/vnd.google-earth.kml+xml');
-    toast(t('admin.gen.done'), 'ok');
+    saveOutput('KML', `${slug()}-roxys.kml`, buildKml(f), 'application/vnd.google-earth.kml+xml');
   }
 
   // Modal with copy-to-clipboard (and optional file download) for embed code.
-  function showEmbed(title, code, downloadName, mime) {
+  function showEmbed(title, code, downloadName, mime, subfolder) {
     const ta = el('textarea', { rows: 7, readonly: '', style: { width: '100%', fontFamily: 'monospace', fontSize: '.78rem' } });
     ta.value = code;
     const footer = [el('button', { class: 'btn btn--ghost', text: t('common.close'), onclick: () => ctrl.close() })];
-    if (downloadName) footer.push(el('button', { class: 'btn', text: t('admin.gen.downloadHtml'), onclick: () => downloadFile(downloadName, code, mime) }));
+    if (downloadName) footer.push(el('button', { class: 'btn', text: t('admin.gen.downloadHtml'), onclick: () => saveOutput(subfolder || 'Exports', downloadName, code, mime) }));
     footer.push(
       el('button', {
         class: 'btn btn--primary',

@@ -79,7 +79,28 @@ whether to **Save & close**, **Close without saving**, or **Cancel**.
 
 ---
 
-## 4. Day-to-day
+## 4. Generated files — the Documents folder
+
+When you generate a client file (travel JSON), a KML, a website map, or export a
+CSV, the desktop app saves it into your **Documents folder** under a tidy
+subfolder (`Client files/`, `KML/`, `Website embeds/`, `CSV exports/`).
+
+- Set it once in **Master data → Document storage → Change folder**. Point it at
+  a Google Drive / OneDrive folder to keep generated files synced too.
+- If you haven't set a folder yet, the app simply asks where to save each file.
+
+## 5. Import another list
+
+In **Master data → Import another list** you can pull points from another Roxys
+list file into the one you're editing:
+
+- **Merge with current** — adds/updates points from the other file (no
+  duplicates; matched by Google place ID, then coordinates).
+- **Replace current** — swaps in the other file's contents.
+
+Either way, click **Save** afterwards to write the result to your file.
+
+## 6. Day-to-day
 
 - Edit points / categories / texts as before.
 - Generate per-client files from the **Client file** tab and email them — these

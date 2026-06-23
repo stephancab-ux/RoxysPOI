@@ -218,5 +218,20 @@
   "admin.desktop.browse": "Durchsuchen…",
   "admin.desktop.reload": "Von Festplatte neu laden",
   "admin.desktop.openOther": "Andere Datei öffnen…",
-  "admin.desktop.exportCopy": "Kopie exportieren…"
+  "admin.desktop.exportCopy": "Kopie exportieren…",
+
+  "admin.desktop.importTitle": "Andere Liste importieren",
+  "admin.desktop.importHint": "Punkte aus einer anderen Roxys-Listendatei in diese übernehmen.",
+  "admin.desktop.merge": "Mit aktueller zusammenführen",
+  "admin.desktop.replace": "Aktuelle ersetzen",
+  "admin.desktop.importBtn": "Importieren…",
+  "admin.desktop.imported": "Importiert.",
+
+  "admin.docs.title": "Dokumentenspeicher",
+  "admin.docs.hint": "Generierte Kundendateien (Reisedatei, KML, Web-Karte, CSV) werden hier in Unterordnern gespeichert. Verweisen Sie auf einen Google-Drive-/OneDrive-Ordner, um sie zwischen Geräten zu synchronisieren.",
+  "admin.docs.browse": "Ordner ändern",
+  "admin.docs.placeholder": "…/Google Drive/Roxys/Documents",
+  "admin.docs.none": "Noch nicht festgelegt — bis Sie einen Ordner wählen, werden Sie bei jeder Datei nach dem Speicherort gefragt.",
+  "admin.docs.savedTo": "Gespeichert unter {path}",
+  "admin.docs.downloaded": "Heruntergeladen."
 }

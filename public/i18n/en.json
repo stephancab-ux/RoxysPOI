@@ -218,5 +218,20 @@
   "admin.desktop.browse": "Browse…",
   "admin.desktop.reload": "Reload from disk",
   "admin.desktop.openOther": "Open another file…",
-  "admin.desktop.exportCopy": "Export a copy…"
+  "admin.desktop.exportCopy": "Export a copy…",
+
+  "admin.desktop.importTitle": "Import another list",
+  "admin.desktop.importHint": "Bring points from another Roxys list file into this one.",
+  "admin.desktop.merge": "Merge with current",
+  "admin.desktop.replace": "Replace current",
+  "admin.desktop.importBtn": "Import…",
+  "admin.desktop.imported": "Imported.",
+
+  "admin.docs.title": "Document storage",
+  "admin.docs.hint": "Generated client files (travel file, KML, website map, CSV) are saved here, under subfolders. Point this at a Google Drive / OneDrive folder to sync them between machines.",
+  "admin.docs.browse": "Change folder",
+  "admin.docs.placeholder": "…/Google Drive/Roxys/Documents",
+  "admin.docs.none": "Not set yet — you'll be asked where to save each file until you choose a folder.",
+  "admin.docs.savedTo": "Saved to {path}",
+  "admin.docs.downloaded": "Downloaded."
 }
