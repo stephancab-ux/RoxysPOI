@@ -11,14 +11,16 @@ import { BRAND, LANGUAGES } from './config.js';
 import { initTheme, getTheme, setTheme, logoForTheme } from './ui/theme.js';
 import { initI18n, setLang, getLang, t, applyTranslations, onLangChange } from './ui/i18n.js';
 import { el, clear, toast, openDrawer, pickFile } from './ui/components.js';
-import { loadDataset } from './data/db.js';
+import { loadDataset, loadItinerary, clearItinerary } from './data/db.js';
 import { isExpired, categoryName, validateClientFile } from './data/schema.js';
 import { loadContent, getContent, pickLang } from './data/content.js';
-import { importClientFile } from './data/clientFile.js';
+import { importClientFile, importItineraryFile } from './data/clientFile.js';
+import { itineraryPoints } from './data/itinerary.js';
 import { createMap, createLocator, fitToPoints } from './map/mapCore.js';
 import { BaseLayers } from './map/baseLayers.js';
 import { createClusterGroup } from './map/clusters.js';
 import { poiToMarker } from './map/markers.js';
+import { createItineraryLayer } from './map/itineraryLayer.js';
 import { createFilters } from './filters/filters.js';
 import { buildOfflineSection, hydratePacks } from './offline/packs.js';
 
@@ -53,25 +55,6 @@ function renderWelcome() {
     )
   );
 
-  const importBtn = el('button', {
-    class: 'btn btn--primary',
-    'data-i18n': 'welcome.import',
-    onclick: async () => {
-      const file = await pickFile('.json,application/json');
-      if (!file) return;
-      importBtn.disabled = true;
-      importBtn.textContent = t('welcome.importing');
-      const { ok, data, errors } = await importClientFile(file);
-      if (ok) {
-        startMap(data);
-      } else {
-        toast(errors[0] || t('welcome.badFile'), 'error');
-        importBtn.disabled = false;
-        importBtn.textContent = t('welcome.import');
-      }
-    },
-  });
-
   const view = el('div', { class: 'welcome' }, [
     logo,
     el('p', { class: 'welcome__tagline', text: BRAND.tagline }),
@@ -80,10 +63,35 @@ function renderWelcome() {
       langRow,
     ]),
     welcomeIntroEl(),
-    el('div', { class: 'welcome__actions' }, [importBtn]),
+    el('div', { class: 'welcome__actions' }, [importButton('places'), importButton('itinerary')]),
   ]);
   clear(root).append(view);
   applyTranslations(view);
+}
+
+/** A welcome-screen import button for either the places file or the itinerary. */
+function importButton(kind) {
+  const labelKey = kind === 'itinerary' ? 'welcome.importItinerary' : 'welcome.import';
+  const btn = el('button', {
+    class: kind === 'itinerary' ? 'btn btn--ghost' : 'btn btn--primary',
+    'data-i18n': labelKey,
+    onclick: async () => {
+      const file = await pickFile('.json,application/json');
+      if (!file) return;
+      btn.disabled = true;
+      btn.textContent = t('welcome.importing');
+      const importFn = kind === 'itinerary' ? importItineraryFile : importClientFile;
+      const { ok, errors } = await importFn(file);
+      if (ok) {
+        await showFromStorage();
+      } else {
+        toast(errors[0] || t('welcome.badFile'), 'error');
+        btn.disabled = false;
+        btn.textContent = t(labelKey);
+      }
+    },
+  });
+  return btn;
 }
 
 // ---- Expiry lock -------------------------------------------------------------
@@ -114,10 +122,14 @@ function renderLock(dataset) {
 }
 
 // ---- Map view ----------------------------------------------------------------
-function renderMap(dataset) {
+// Either layer is optional: a traveler may import places, an itinerary, or both.
+function renderMap(dataset, itinerary) {
+  const hasPlaces = !!(dataset && Array.isArray(dataset.points));
+  const points = hasPlaces ? dataset.points : [];
+
   const logo = el('img', { class: 'appbar__logo', src: logoForTheme(), alt: BRAND.name, 'data-logo': true });
 
-  // search box
+  // search box (places only)
   const results = el('div', { class: 'search__results hidden' });
   const searchInput = el('input', {
     type: 'search',
@@ -128,108 +140,113 @@ function renderMap(dataset) {
   const search = el('div', { class: 'search' }, [searchInput, results]);
 
   // ☰ hamburger → filters (countries/categories) · ⚙ gear → settings
-  const filtersBtn = el('button', {
-    class: 'fab',
-    title: t('map.filters'),
-    'aria-label': t('map.filters'),
-    text: '☰',
-  });
-  const settingsBtn = el('button', {
-    class: 'fab',
-    title: t('map.settings'),
-    'aria-label': t('map.settings'),
-    text: '⚙',
-  });
+  const filtersBtn = el('button', { class: 'fab', title: t('map.filters'), 'aria-label': t('map.filters'), text: '☰' });
+  const settingsBtn = el('button', { class: 'fab', title: t('map.settings'), 'aria-label': t('map.settings'), text: '⚙' });
 
-  const appbar = el('div', { class: 'appbar' }, [logo, search, el('div', { class: 'appbar__spacer' }), filtersBtn, settingsBtn]);
+  const appbar = el('div', { class: 'appbar' }, [
+    logo,
+    hasPlaces ? search : null,
+    el('div', { class: 'appbar__spacer' }),
+    hasPlaces ? filtersBtn : null,
+    settingsBtn,
+  ].filter(Boolean));
   const mapEl = el('div', { class: 'map', id: 'map' });
   const locateBtn = el('button', { class: 'fab', title: t('map.locate'), 'aria-label': t('map.locate'), text: '📍' });
   const fabStack = el('div', { class: 'fab-stack' }, [locateBtn]);
 
   clear(root).append(appbar, mapEl, fabStack);
 
-  // map + layers
+  // map + base layers
   const map = createMap(mapEl);
   const baseLayers = new BaseLayers(map);
   baseLayers.start();
-  const clusterGroup = createClusterGroup();
-  map.addLayer(clusterGroup);
   const locator = createLocator(map);
   locateBtn.addEventListener('click', () => locator.locate());
 
-  const filters = createFilters(dataset);
-
-  function renderMarkers() {
-    clusterGroup.clearLayers();
-    const markers = filters.filtered().map((p) => poiToMarker(p, filters.getCategory));
-    clusterGroup.addLayers(markers);
+  // ---- Itinerary layer (route + numbered stops + annotation pins) ----
+  if (itinerary) {
+    const itinLayer = createItineraryLayer(itinerary);
+    map.addLayer(itinLayer);
+    let shown = true;
+    const routeBtn = el('button', { class: 'fab', title: t('map.toggleRoute'), 'aria-label': t('map.toggleRoute'), text: '🧭' });
+    routeBtn.addEventListener('click', () => {
+      shown = !shown;
+      if (shown) map.addLayer(itinLayer);
+      else map.removeLayer(itinLayer);
+      routeBtn.classList.toggle('fab--off', !shown);
+    });
+    fabStack.append(routeBtn);
   }
-  filters.onChange(renderMarkers);
-  renderMarkers();
-  fitToPoints(map, dataset.points);
 
-  // bottom category pills (rebuilt when the language changes)
-  let pillBar = filters.buildCategoryBar();
-  root.append(pillBar);
-  onLangChange(() => {
-    const fresh = filters.buildCategoryBar();
-    pillBar.replaceWith(fresh);
-    pillBar = fresh;
-  });
+  // ---- Places layer (clusters + filters + pills + search) ----
+  if (hasPlaces) {
+    const clusterGroup = createClusterGroup();
+    map.addLayer(clusterGroup);
+    const filters = createFilters(dataset);
 
-  // search behaviour
-  const runSearch = () => {
-    const q = searchInput.value.trim().toLowerCase();
-    if (!q) {
+    const renderMarkers = () => {
+      clusterGroup.clearLayers();
+      clusterGroup.addLayers(filters.filtered().map((p) => poiToMarker(p, filters.getCategory)));
+    };
+    filters.onChange(renderMarkers);
+    renderMarkers();
+
+    let pillBar = filters.buildCategoryBar();
+    root.append(pillBar);
+    onLangChange(() => {
+      const fresh = filters.buildCategoryBar();
+      pillBar.replaceWith(fresh);
+      pillBar = fresh;
+    });
+
+    const goToPoint = (p) => {
       results.classList.add('hidden');
-      return;
-    }
-    const matches = dataset.points
-      .filter((p) => p.name.toLowerCase().includes(q) || (p.note || '').toLowerCase().includes(q))
-      .slice(0, 12);
-    clear(results);
-    if (matches.length === 0) {
-      results.append(el('button', { class: 'muted', text: t('map.search.none'), disabled: true }));
-    } else {
-      for (const p of matches) {
-        const cat = filters.getCategory(p.categoryId);
-        results.append(
-          el('button', { onclick: () => goToPoint(p) }, [
-            el('div', { text: `${cat ? cat.emoji + ' ' : ''}${p.name}` }),
-            p.country && el('div', { class: 'muted', text: p.country }),
-          ])
-        );
-      }
-    }
-    results.classList.remove('hidden');
-  };
-  searchInput.addEventListener('input', runSearch);
-  searchInput.addEventListener('focus', runSearch);
-  document.addEventListener('click', (e) => {
-    if (!search.contains(e.target)) results.classList.add('hidden');
-  });
+      searchInput.value = '';
+      map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 15));
+      const cat = filters.getCategory(p.categoryId);
+      const html = [
+        `<div class="popup__title">${escapeHtml(p.name)}</div>`,
+        cat ? `<div class="popup__cat">${cat.emoji} ${escapeHtml(categoryName(cat, getLang()))}</div>` : '',
+        p.note ? `<div class="popup__note">${escapeHtml(p.note)}</div>` : '',
+        p.googleUrl ? `<a class="popup__link" href="${encodeURI(p.googleUrl)}" target="_blank" rel="noopener noreferrer">📍 ${escapeHtml(t('popup.openGoogle'))}</a>` : '',
+      ].join('');
+      map.openPopup(html, [p.lat, p.lng], { maxWidth: 280 });
+    };
 
-  function goToPoint(p) {
-    results.classList.add('hidden');
-    searchInput.value = '';
-    map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 15));
-    const cat = filters.getCategory(p.categoryId);
-    const html = [
-      `<div class="popup__title">${escapeHtml(p.name)}</div>`,
-      cat ? `<div class="popup__cat">${cat.emoji} ${escapeHtml(categoryName(cat, getLang()))}</div>` : '',
-      p.note ? `<div class="popup__note">${escapeHtml(p.note)}</div>` : '',
-      p.googleUrl
-        ? `<a class="popup__link" href="${encodeURI(p.googleUrl)}" target="_blank" rel="noopener noreferrer">📍 ${escapeHtml(t('popup.openGoogle'))}</a>`
-        : '',
-    ].join('');
-    map.openPopup(html, [p.lat, p.lng], { maxWidth: 280 });
+    const runSearch = () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) return results.classList.add('hidden');
+      const matches = points.filter((p) => p.name.toLowerCase().includes(q) || (p.note || '').toLowerCase().includes(q)).slice(0, 12);
+      clear(results);
+      if (matches.length === 0) {
+        results.append(el('button', { class: 'muted', text: t('map.search.none'), disabled: true }));
+      } else {
+        for (const p of matches) {
+          const cat = filters.getCategory(p.categoryId);
+          results.append(
+            el('button', { onclick: () => goToPoint(p) }, [
+              el('div', { text: `${cat ? cat.emoji + ' ' : ''}${p.name}` }),
+              p.country && el('div', { class: 'muted', text: p.country }),
+            ])
+          );
+        }
+      }
+      results.classList.remove('hidden');
+    };
+    searchInput.addEventListener('input', runSearch);
+    searchInput.addEventListener('focus', runSearch);
+    document.addEventListener('click', (e) => {
+      if (!search.contains(e.target)) results.classList.add('hidden');
+    });
+    filtersBtn.addEventListener('click', () => openDrawer({ title: t('filters.title'), body: filters.buildFilterPanel() }));
   }
 
-  // drawers
-  filtersBtn.addEventListener('click', () => {
-    openDrawer({ title: t('filters.title'), body: filters.buildFilterPanel() });
-  });
-  settingsBtn.addEventListener('click', () => openSettings(dataset, baseLayers));
+  settingsBtn.addEventListener('click', () => openSettings(dataset, itinerary, baseLayers));
+
+  // fit to everything we have (places + itinerary)
+  const fitPts = points.map((p) => ({ lat: p.lat, lng: p.lng }));
+  if (itinerary) fitPts.push(...itineraryPoints(itinerary));
+  fitToPoints(map, fitPts);
 
   // offline packs (register any already downloaded)
   hydratePacks(baseLayers).then(() => baseLayers.update());
@@ -239,7 +256,8 @@ function renderMap(dataset) {
 }
 
 // ---- Settings drawer ---------------------------------------------------------
-async function openSettings(dataset, baseLayers) {
+async function openSettings(dataset, itinerary, baseLayers) {
+  const hasPlaces = !!(dataset && Array.isArray(dataset.points));
   const body = el('div', {});
 
   // Theme
@@ -280,35 +298,60 @@ async function openSettings(dataset, baseLayers) {
   );
 
   // Offline maps
-  body.append(await buildOfflineSection(dataset, baseLayers));
+  body.append(await buildOfflineSection(dataset || { points: [], client: '' }, baseLayers));
 
-  // Your travel file
-  body.append(
-    el('div', { class: 'section' }, [
-      el('h3', { 'data-i18n': 'settings.data' }),
+  // Your travel file (places)
+  if (hasPlaces) {
+    body.append(
+      el('div', { class: 'section' }, [
+        el('h3', { 'data-i18n': 'settings.data' }),
+        el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.client')}: ${dataset.client || '—'}` })]),
+        dataset.validUntil && el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.validUntil')}: ${dataset.validUntil}` })]),
+        el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.reimport', onclick: () => replaceFile() }),
+      ].filter(Boolean))
+    );
+  } else {
+    body.append(
+      el('div', { class: 'section' }, [
+        el('h3', { 'data-i18n': 'settings.data' }),
+        el('button', { class: 'btn btn--ghost', 'data-i18n': 'welcome.import', onclick: () => replaceFile() }),
+      ])
+    );
+  }
+
+  // Your itinerary (route)
+  const itinSection = el('div', { class: 'section' }, [el('h3', { 'data-i18n': 'settings.itinerary' })]);
+  if (itinerary) {
+    itinSection.append(
+      el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.route')}: ${itinerary.title || '—'} · ${t('settings.stops', { n: (itinerary.stops || []).length })}` })]),
       el('div', { class: 'row' }, [
-        el('span', { class: 'muted', text: `${t('settings.client')}: ${dataset.client || '—'}` }),
-      ]),
-      dataset.validUntil &&
-        el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.validUntil')}: ${dataset.validUntil}` })]),
-      el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.reimport', onclick: () => replaceFile() }),
-    ])
-  );
+        el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.reimportItinerary', onclick: () => importItinerary() }),
+        el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.removeItinerary', onclick: async () => { await clearItinerary(); location.reload(); } }),
+      ])
+    );
+  } else {
+    itinSection.append(el('button', { class: 'btn btn--ghost', 'data-i18n': 'welcome.importItinerary', onclick: () => importItinerary() }));
+  }
+  body.append(itinSection);
 
   const ctrl = openDrawer({ title: t('settings.title'), body });
   applyTranslations(ctrl.drawer);
 }
 
-// ---- Replace / re-import file ------------------------------------------------
+// ---- Replace / re-import files -----------------------------------------------
 async function replaceFile() {
   const file = await pickFile('.json,application/json');
   if (!file) return;
-  const { ok, data, errors } = await importClientFile(file);
-  if (ok) {
-    location.reload();
-  } else {
-    toast(errors[0] || t('welcome.badFile'), 'error');
-  }
+  const { ok, errors } = await importClientFile(file);
+  if (ok) location.reload();
+  else toast(errors[0] || t('welcome.badFile'), 'error');
+}
+async function importItinerary() {
+  const file = await pickFile('.json,application/json');
+  if (!file) return;
+  const { ok, errors } = await importItineraryFile(file);
+  if (ok) location.reload();
+  else toast(errors[0] || t('welcome.badFile'), 'error');
 }
 
 function escapeHtml(s) {
@@ -316,9 +359,17 @@ function escapeHtml(s) {
 }
 
 // ---- Route -------------------------------------------------------------------
-async function startMap(dataset) {
-  if (isExpired(dataset.validUntil)) renderLock(dataset);
-  else renderMap(dataset);
+function startMap(dataset, itinerary) {
+  if (dataset && isExpired(dataset.validUntil)) renderLock(dataset);
+  else renderMap(dataset, itinerary);
+}
+
+/** Load whatever the traveler has imported (places and/or itinerary) and show it. */
+async function showFromStorage() {
+  const [dataset, itinerary] = await Promise.all([loadDataset(), loadItinerary()]);
+  const hasPlaces = dataset && Array.isArray(dataset.points);
+  if (hasPlaces || itinerary) startMap(hasPlaces ? dataset : null, itinerary || null);
+  else renderWelcome();
 }
 
 // ---- Embed mode (website iframe: data passed in the URL fragment) ------------
@@ -345,12 +396,10 @@ async function main() {
   const embed = embedDataset();
   if (embed) {
     document.documentElement.classList.add('embed');
-    renderMap(embed); // embedded map: skip welcome/import and the expiry lock
+    renderMap(embed, null); // embedded map: skip welcome/import and the expiry lock
     return;
   }
-  const dataset = await loadDataset();
-  if (dataset && Array.isArray(dataset.points)) startMap(dataset);
-  else renderWelcome();
+  await showFromStorage();
 }
 
 main();

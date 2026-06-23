@@ -143,6 +143,54 @@
   box-shadow: 0 0 0 2px rgba(42, 123, 246, 0.4);
 }
 
+/* ---- Itinerary layer: numbered stops, annotation pins, transport badges ----- */
+.rx-stop {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+.rx-stop span {
+  transform: rotate(45deg);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+.rx-anno,
+.rx-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #fff;
+  line-height: 1;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+}
+.rx-anno {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #e11d48;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  font-size: 15px;
+}
+.rx-mode {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #15803d;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+}
+/* Route-toggle FAB when the itinerary is hidden. */
+.fab--off {
+  opacity: 0.45;
+}
+
 /* Small offline banner shown when no pack covers the current view. */
 .map-banner {
   position: absolute;

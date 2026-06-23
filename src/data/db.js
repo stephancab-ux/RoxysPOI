@@ -1,6 +1,7 @@
 // =============================================================================
 // IndexedDB access (via idb). Stores:
 //   dataset       — the client's imported travel file (single record, key 'current')
+//   itinerary     — the client's imported route file (single record, key 'current')
 //   master        — the agency master {pois, categories} (single record, key 'current')
 //   offlinePacks  — downloaded PMTiles vector packs, keyed by country
 //   settings      — misc key/value (language & theme live in localStorage)
@@ -11,7 +12,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'roxys-travel-plan';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let _dbPromise = null;
 
@@ -25,6 +26,9 @@ export function db() {
           database.createObjectStore('master');
           database.createObjectStore('offlinePacks', { keyPath: 'country' });
           database.createObjectStore('settings');
+        }
+        if (oldVersion < 2) {
+          database.createObjectStore('itinerary');
         }
       },
     });
@@ -41,6 +45,17 @@ export async function loadDataset() {
 }
 export async function clearDataset() {
   return (await db()).delete('dataset', 'current');
+}
+
+// ---- Client itinerary (route) ------------------------------------------------
+export async function saveItinerary(itinerary) {
+  return (await db()).put('itinerary', itinerary, 'current');
+}
+export async function loadItinerary() {
+  return (await db()).get('itinerary', 'current');
+}
+export async function clearItinerary() {
+  return (await db()).delete('itinerary', 'current');
 }
 
 // ---- Admin master ------------------------------------------------------------

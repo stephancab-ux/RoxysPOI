@@ -8,7 +8,9 @@ attractions…) and shares **scoped subsets** with clients.
   file the agency emailed, then browse those places on a Leaflet map with
   numbered clusters, category/country filters, search, "open in Google Maps"
   links, a GPS "you are here" dot, and offline maps. Locks itself after the
-  travel dates.
+  travel dates. It can also import a second **itinerary** file (a route exported
+  from the agency's CRM) and draw the journey — numbered stops, route lines
+  styled per transport mode, and annotation pins — over the same map.
 - **Admin** (a **local desktop app** — "Roxys Admin", Windows + macOS): import
   POIs from CSV, auto-tag each point's country from its coordinates, manage
   categories (emoji + colour, applied globally), edit points on a table + map,
