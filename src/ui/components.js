@@ -88,27 +88,36 @@ export function openModal({ title, body, footer = [], onClose }) {
 /** Promise-based yes/no confirm. */
 export function confirmDialog(message, { okLabel, danger } = {}) {
   return new Promise((resolve) => {
+    // Guard so the first settle wins: closing the modal fires onClose (→ false),
+    // which must NOT override a click on OK (→ true).
+    let settled = false;
+    const settle = (v) => {
+      if (!settled) {
+        settled = true;
+        resolve(v);
+      }
+    };
     const ok = el('button', {
       class: `btn ${danger ? 'btn--danger' : 'btn--primary'}`,
       text: okLabel || t('common.confirm'),
       onclick: () => {
+        settle(true);
         ctrl.close();
-        resolve(true);
       },
     });
     const cancel = el('button', {
       class: 'btn btn--ghost',
       text: t('common.cancel'),
       onclick: () => {
+        settle(false);
         ctrl.close();
-        resolve(false);
       },
     });
     const ctrl = openModal({
       title: t('common.confirm'),
       body: el('p', { text: message }),
       footer: [cancel, ok],
-      onClose: () => resolve(false),
+      onClose: () => settle(false),
     });
   });
 }

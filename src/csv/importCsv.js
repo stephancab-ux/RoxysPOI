@@ -33,12 +33,54 @@ export function parseCsv(file) {
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
-/** Best-guess mapping from our fields to actual CSV headers. */
-export function autoMap(headers) {
+const GMAPS_RE = /google\.[^/]+\/maps|maps\.app\.goo\.gl|\/place\//i;
+
+// A Google Maps URL contains commas (the "@lat,lng,zoomZ" viewport). In a CSV
+// that doesn't quote its fields, PapaParse splits that one URL across several
+// columns, leaving the URL truncated (e.g. ".../@46.28") and the rest in the
+// row's `__parsed_extra`. These helpers stitch it back together so coordinates
+// (and the dedup placeId) survive an unquoted export.
+const TRUNCATED_GMAPS_RE = /[@,][-\d.]+$/; // ends mid-viewport: "…@46.28" or "…,7.51"
+function isUrlContinuation(s) {
+  s = String(s);
+  return /^[-\d.]+$/.test(s) || /\d(?:\.\d+)?z(?:[/?]|$)|\/data=|!\dm|!\dd|\/@/.test(s);
+}
+/** Rejoin a Google Maps URL that an unquoted-comma CSV split across columns. */
+function repairGoogleUrl(url, extra) {
+  if (!url || !Array.isArray(extra) || !GMAPS_RE.test(url) || !TRUNCATED_GMAPS_RE.test(url)) return url;
+  const parts = [url];
+  for (const e of extra) {
+    if (isUrlContinuation(e)) parts.push(String(e));
+    else break;
+  }
+  return parts.join(',');
+}
+
+/**
+ * Best-guess mapping from our fields to actual CSV headers.
+ * Falls back to **content sniffing** for the Google Maps URL column when no
+ * header matched — so a column named e.g. "Link" or "Lieu" is still found.
+ */
+export function autoMap(headers, rows = []) {
   const mapping = {};
   for (const [field, aliases] of Object.entries(CSV_DEFAULT_MAPPING)) {
     const found = headers.find((h) => aliases.includes(norm(h)));
     mapping[field] = found || null;
+  }
+  if (!mapping.googleUrl && headers.length && rows.length) {
+    const sample = rows.slice(0, 25);
+    const nonEmpty = sample.filter((r) => Object.values(r).some((v) => String(v ?? '').trim() !== '')).length || 1;
+    let best = null;
+    let bestScore = 0;
+    for (const h of headers) {
+      let score = 0;
+      for (const r of sample) if (GMAPS_RE.test(String(r[h] ?? ''))) score++;
+      if (score > bestScore) {
+        bestScore = score;
+        best = h;
+      }
+    }
+    if (best && bestScore >= Math.max(1, Math.ceil(nonEmpty * 0.5))) mapping.googleUrl = best;
   }
   return mapping;
 }
@@ -70,7 +112,7 @@ export function buildPois(rows, mapping, defaultCategoryId, tagger, resolveCateg
 
   for (const row of rows) {
     const get = (field) => (mapping[field] ? row[mapping[field]] ?? '' : '');
-    const url = String(get('googleUrl')).trim();
+    const url = repairGoogleUrl(String(get('googleUrl')).trim(), row.__parsed_extra);
     const parsed = url ? parseGoogleMapsUrl(url) : { name: '', lat: null, lng: null, placeId: '' };
 
     const name = String(get('name')).trim() || parsed.name;

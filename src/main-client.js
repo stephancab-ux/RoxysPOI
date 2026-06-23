@@ -12,7 +12,7 @@ import { initTheme, getTheme, setTheme, logoForTheme } from './ui/theme.js';
 import { initI18n, setLang, getLang, t, applyTranslations, onLangChange } from './ui/i18n.js';
 import { el, clear, toast, openDrawer, pickFile } from './ui/components.js';
 import { loadDataset } from './data/db.js';
-import { isExpired, categoryName } from './data/schema.js';
+import { isExpired, categoryName, validateClientFile } from './data/schema.js';
 import { loadContent, getContent, pickLang } from './data/content.js';
 import { importClientFile } from './data/clientFile.js';
 import { createMap, createLocator, fitToPoints } from './map/mapCore.js';
@@ -321,10 +321,33 @@ async function startMap(dataset) {
   else renderMap(dataset);
 }
 
+// ---- Embed mode (website iframe: data passed in the URL fragment) ------------
+function decodeData(s) {
+  let b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  return JSON.parse(decodeURIComponent(escape(atob(b64))));
+}
+function embedDataset() {
+  const m = (location.hash || '').match(/[#&]data=([^&]+)/);
+  if (!m) return null;
+  try {
+    const result = validateClientFile(decodeData(m[1]));
+    return result.ok ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   initTheme();
   await initI18n();
   await loadContent(); // agency-editable welcome/expiry/email text
+  const embed = embedDataset();
+  if (embed) {
+    document.documentElement.classList.add('embed');
+    renderMap(embed); // embedded map: skip welcome/import and the expiry lock
+    return;
+  }
   const dataset = await loadDataset();
   if (dataset && Array.isArray(dataset.points)) startMap(dataset);
   else renderWelcome();

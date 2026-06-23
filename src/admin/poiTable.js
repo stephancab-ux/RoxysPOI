@@ -11,7 +11,7 @@ import { genId, hasCoords, countriesOf } from '../data/schema.js';
 import { persistMaster } from '../data/master.js';
 import { createOsmLayer } from '../map/baseLayers.js';
 import { createClusterGroup } from '../map/clusters.js';
-import { poiToMarker } from '../map/markers.js';
+import { pinIcon } from '../map/markers.js';
 import { loadCountryTagger } from '../geo/countryTag.js';
 import { parseGoogleMapsUrl } from '../csv/googleUrl.js';
 
@@ -269,23 +269,52 @@ export function renderPoiTable(container, { master, onChange }) {
 
   // ---- Map view --------------------------------------------------------------
   let mapInstance = null;
+  let mapResizeObserver = null;
+
+  // Admin popup: name + category + Edit / Delete (delete removes from the DB).
+  function adminPopup(p, c) {
+    return el('div', { class: 'popup' }, [
+      el('div', { class: 'popup__title', text: p.name }),
+      c ? el('div', { class: 'popup__cat' }, [el('span', { text: c.emoji }), el('span', { text: c.name })]) : null,
+      p.note ? el('div', { class: 'popup__note', text: p.note }) : null,
+      el('div', { class: 'row', style: { gap: '.4rem', marginTop: '.5rem' } }, [
+        el('button', { class: 'btn btn--sm', text: t('common.edit'), onclick: () => { mapInstance?.closePopup(); openForm(p); } }),
+        el('button', { class: 'btn btn--sm btn--danger', text: t('common.delete'), onclick: async () => { mapInstance?.closePopup(); await remove(p); } }),
+      ]),
+    ].filter(Boolean));
+  }
+
   function buildMap() {
     const div = el('div', { class: 'admin-map', id: 'admin-map' });
     setTimeout(() => {
+      mapResizeObserver?.disconnect();
       mapInstance?.remove();
       mapInstance = L.map(div).setView([-8.4, 115.2], 5);
       createOsmLayer().addTo(mapInstance);
+      const cats = catById();
       const cluster = createClusterGroup();
       const pts = filtered().filter(hasCoords);
-      cluster.addLayers(pts.map((p) => poiToMarker(p, (id) => catById().get(id))));
+      const markers = pts.map((p) => {
+        const m = L.marker([p.lat, p.lng], { icon: pinIcon(cats.get(p.categoryId)), title: p.name });
+        m.bindPopup(() => adminPopup(p, catById().get(p.categoryId)), { maxWidth: 260 });
+        return m;
+      });
+      cluster.addLayers(markers);
       mapInstance.addLayer(cluster);
       if (pts.length) mapInstance.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lng])).pad(0.15));
+      // repaint when the user drag-resizes the container (avoids grey tiles)
+      mapResizeObserver = new ResizeObserver(() => mapInstance && mapInstance.invalidateSize());
+      mapResizeObserver.observe(div);
     }, 0);
     return div;
   }
 
   // ---- Render shell ----------------------------------------------------------
   function render() {
+    if (mapResizeObserver) {
+      mapResizeObserver.disconnect();
+      mapResizeObserver = null;
+    }
     if (mapInstance) {
       mapInstance.remove();
       mapInstance = null;

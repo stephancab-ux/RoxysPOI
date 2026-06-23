@@ -610,10 +610,13 @@ table.data tbody tr:hover {
 
 /* ---- Admin map -------------------------------------------------------------- */
 .admin-map {
-  height: 420px;
+  height: 460px;
+  min-height: 320px;
+  max-height: 88vh;
+  resize: both; /* drag the bottom-right corner to resize */
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
 }
 
 /* ---- Login ------------------------------------------------------------------ */

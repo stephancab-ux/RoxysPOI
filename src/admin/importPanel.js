@@ -38,7 +38,7 @@ export function renderImportPanel(container, { master, onChange }) {
             if (!file) return;
             try {
               parsed = await parseCsv(file);
-              mapping = autoMap(parsed.headers);
+              mapping = autoMap(parsed.headers, parsed.rows);
               render();
             } catch {
               toast(t('welcome.badFile'), 'error');

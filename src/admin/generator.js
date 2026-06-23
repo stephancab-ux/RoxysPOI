@@ -4,11 +4,12 @@
 // buffered bbox per country for the agency's PMTiles offline-pack command.
 // =============================================================================
 
-import { el, mount, downloadFile, toast } from '../ui/components.js';
+import { el, mount, downloadFile, toast, openModal } from '../ui/components.js';
 import { t } from '../ui/i18n.js';
 import { hasCoords, countriesOf } from '../data/schema.js';
 import { bufferedBbox, formatBbox } from '../geo/bbox.js';
 import { packFileName } from '../offline/packs.js';
+import { buildStandaloneHtml, buildIframeEmbed, buildKml } from './exporters.js';
 
 export function renderGenerator(container, { master }) {
   const allCountries = countriesOf(master.pois);
@@ -65,17 +66,60 @@ export function renderGenerator(container, { master }) {
     }
   }
 
-  function generate() {
-    if (!sel.client.trim()) return toast(t('admin.gen.needClient'), 'error');
-    if (!sel.from || !sel.until) return toast(t('admin.gen.needDates'), 'error');
-    if (sel.countries.size === 0 || sel.cats.size === 0) return toast(t('admin.gen.needSelection'), 'error');
+  /** Validate the selection and assemble the scoped client file (or null). */
+  function buildFile() {
+    if (!sel.client.trim()) return toast(t('admin.gen.needClient'), 'error'), null;
+    if (!sel.from || !sel.until) return toast(t('admin.gen.needDates'), 'error'), null;
+    if (sel.countries.size === 0 || sel.cats.size === 0) return toast(t('admin.gen.needSelection'), 'error'), null;
     const points = selectedPoints();
     const usedCats = new Set(points.map((p) => p.categoryId));
     const categories = master.categories.filter((c) => usedCats.has(c.id));
-    const file = { client: sel.client.trim(), validFrom: sel.from, validUntil: sel.until, categories, points };
-    const slug = sel.client.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
-    downloadFile(`${slug}-roxys-travel.json`, JSON.stringify(file, null, 2));
+    return { client: sel.client.trim(), validFrom: sel.from, validUntil: sel.until, categories, points };
+  }
+  const slug = () => sel.client.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
+
+  function downloadJson() {
+    const f = buildFile();
+    if (!f) return;
+    downloadFile(`${slug()}-roxys-travel.json`, JSON.stringify(f, null, 2));
     toast(t('admin.gen.done'), 'ok');
+  }
+  function downloadHtmlEmbed() {
+    const f = buildFile();
+    if (!f) return;
+    showEmbed(t('admin.gen.htmlTitle'), buildStandaloneHtml(f), `${slug()}-map.html`, 'text/html');
+  }
+  function copyIframeEmbed() {
+    const f = buildFile();
+    if (!f) return;
+    const appUrl = new URL(import.meta.env.BASE_URL, location.origin).href;
+    showEmbed(t('admin.gen.iframeTitle'), buildIframeEmbed(f, appUrl));
+  }
+  function downloadKmlFile() {
+    const f = buildFile();
+    if (!f) return;
+    downloadFile(`${slug()}-roxys.kml`, buildKml(f), 'application/vnd.google-earth.kml+xml');
+    toast(t('admin.gen.done'), 'ok');
+  }
+
+  // Modal with copy-to-clipboard (and optional file download) for embed code.
+  function showEmbed(title, code, downloadName, mime) {
+    const ta = el('textarea', { rows: 7, readonly: '', style: { width: '100%', fontFamily: 'monospace', fontSize: '.78rem' } });
+    ta.value = code;
+    const footer = [el('button', { class: 'btn btn--ghost', text: t('common.close'), onclick: () => ctrl.close() })];
+    if (downloadName) footer.push(el('button', { class: 'btn', text: t('admin.gen.downloadHtml'), onclick: () => downloadFile(downloadName, code, mime) }));
+    footer.push(
+      el('button', {
+        class: 'btn btn--primary',
+        text: t('admin.gen.copy'),
+        onclick: () => {
+          ta.select();
+          navigator.clipboard?.writeText(code).then(() => toast(t('admin.gen.copied'), 'ok')).catch(() => {});
+        },
+      })
+    );
+    const ctrl = openModal({ title, body: el('div', { class: 'stack' }, [el('p', { class: 'muted', text: t('admin.gen.embedHint') }), ta]), footer });
+    setTimeout(() => ta.select(), 50);
   }
 
   function render() {
@@ -98,7 +142,12 @@ export function renderGenerator(container, { master }) {
         el('div', { class: 'field' }, [el('label', { text: t('admin.gen.until') }), until]),
       ]),
       el('div', { class: 'section' }, [el('p', {}, [summaryEl])]),
-      el('button', { class: 'btn btn--primary', text: t('admin.gen.generate'), onclick: generate }),
+      el('div', { class: 'toolbar' }, [
+        el('button', { class: 'btn btn--primary', text: t('admin.gen.generate'), onclick: downloadJson }),
+        el('button', { class: 'btn', text: t('admin.gen.html'), onclick: downloadHtmlEmbed }),
+        el('button', { class: 'btn', text: t('admin.gen.iframe'), onclick: copyIframeEmbed }),
+        el('button', { class: 'btn', text: t('admin.gen.kml'), onclick: downloadKmlFile }),
+      ]),
       el('div', { class: 'section' }, [el('h3', { text: t('admin.gen.bbox') }), bboxEl]),
     ]);
     mount(container, panel);
