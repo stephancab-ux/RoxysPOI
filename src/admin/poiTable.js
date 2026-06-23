@@ -10,7 +10,7 @@ import { saveOutput } from './saveOutput.js';
 import { t } from '../ui/i18n.js';
 import { genId, hasCoords, countriesOf } from '../data/schema.js';
 import { persistMaster } from '../data/master.js';
-import { createOsmLayer } from '../map/baseLayers.js';
+import { createOnlineLayer } from '../map/baseLayers.js';
 import { createClusterGroup } from '../map/clusters.js';
 import { pinIcon } from '../map/markers.js';
 import { loadCountryTagger } from '../geo/countryTag.js';
@@ -290,8 +290,8 @@ export function renderPoiTable(container, { master, onChange }) {
     setTimeout(() => {
       mapResizeObserver?.disconnect();
       mapInstance?.remove();
-      mapInstance = L.map(div).setView([-8.4, 115.2], 5);
-      createOsmLayer().addTo(mapInstance);
+      mapInstance = L.map(div, { minZoom: 1 }).setView([-8.4, 115.2], 5);
+      createOnlineLayer().addTo(mapInstance); // English (OpenFreeMap) base, same as the client
       const cats = catById();
       const cluster = createClusterGroup();
       const pts = filtered().filter(hasCoords);

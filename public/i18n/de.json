@@ -18,11 +18,11 @@
   "common.required": "Erforderlich",
 
   "welcome.langPrompt": "Wählen Sie Ihre Sprache",
-  "welcome.intro": "Willkommen bei <strong>Roxys Travel Plan</strong> — eine persönliche Karte handverlesener Orte für Ihre Reise. Tippen Sie auf <em>Meine Reisedatei importieren</em> und wählen Sie die Datei, die wir Ihnen per E-Mail geschickt haben. Ihre Orte funktionieren dann direkt hier auf der Karte, sogar offline. <span class=\"muted\">(Platzhaltertext, den die Agentur später bearbeiten kann.)</span>",
-  "welcome.import": "Meine Reisedatei importieren",
+  "welcome.intro": "Willkommen bei <strong>Roxys Travel Plan</strong> — eine persönliche Karte handverlesener Orte für Ihre Reise. Tippen Sie auf <em>Meine Empfehlungsliste importieren</em> und wählen Sie die Datei, die wir Ihnen per E-Mail geschickt haben. Ihre Orte funktionieren dann direkt hier auf der Karte, sogar offline. <span class=\"muted\">(Platzhaltertext, den die Agentur später bearbeiten kann.)</span>",
+  "welcome.import": "Meine Empfehlungsliste importieren",
   "welcome.importing": "Importieren…",
   "welcome.noFile": "Bitte wählen Sie die von der Agentur gesendete Datei.",
-  "welcome.badFile": "Die Datei konnte nicht gelesen werden. Stellen Sie sicher, dass es sich um die gesendete Reisedatei handelt.",
+  "welcome.badFile": "Die Datei konnte nicht gelesen werden. Stellen Sie sicher, dass es sich um die gesendete Empfehlungsliste handelt.",
 
   "map.settings": "Einstellungen",
   "map.filters": "Filter",
@@ -54,8 +54,8 @@
   "settings.offline.downloaded": "Heruntergeladen",
   "settings.offline.delete": "Löschen",
   "settings.offline.unavailable": "Für dieses Land ist noch keine Offline-Karte veröffentlicht.",
-  "settings.data": "Ihre Reisedatei",
-  "settings.reimport": "Reisedatei ersetzen…",
+  "settings.data": "Ihre Empfehlungsliste",
+  "settings.reimport": "Empfehlungsliste ersetzen…",
   "welcome.importItinerary": "Meine Reiseroute importieren",
   "map.toggleRoute": "Route ein-/ausblenden",
   "settings.itinerary": "Ihre Reiseroute",
@@ -87,7 +87,7 @@
 
   "admin.tab.pois": "Orte",
   "admin.tab.categories": "Kategorien",
-  "admin.tab.generate": "Kundendatei",
+  "admin.tab.generate": "Empfehlungsliste",
   "admin.tab.import": "CSV importieren",
   "admin.tab.data": "Stammdaten",
 
@@ -146,8 +146,8 @@
   "admin.import.needCategory": "Wählen Sie eine Kategorie für diese Datei.",
   "admin.import.needFile": "Wählen Sie zuerst eine CSV-Datei.",
 
-  "admin.gen.title": "Kundendatei erstellen",
-  "admin.gen.hint": "Erstellen Sie eine zugeschnittene Datei für einen Kunden. Sie enthält nur die gewählten Länder × Kategorien sowie einen Reisezeitraum. Es wird kein Passwort hinzugefügt.",
+  "admin.gen.title": "Empfehlungsliste erstellen",
+  "admin.gen.hint": "Erstellen Sie eine zugeschnittene Empfehlungsliste für einen Kunden. Sie enthält nur die gewählten Länder × Kategorien sowie einen Reisezeitraum. Es wird kein Passwort hinzugefügt.",
   "admin.gen.client": "Kundenname / Bezeichnung",
   "admin.gen.countries": "Länder",
   "admin.gen.categories": "Kategorien",
@@ -159,7 +159,7 @@
   "admin.gen.needDates": "Legen Sie Start- und Enddatum der Gültigkeit fest.",
   "admin.gen.needSelection": "Wählen Sie mindestens ein Land und eine Kategorie.",
   "admin.gen.bbox": "Begrenzungsrahmen für Offline-Paket (in den PMTiles-Befehl kopieren):",
-  "admin.gen.done": "Kundendatei heruntergeladen.",
+  "admin.gen.done": "Empfehlungsliste heruntergeladen.",
   "admin.gen.html": "Web-Karte (HTML)",
   "admin.gen.iframe": "Einbettung (iframe)",
   "admin.gen.kml": "KML (Google My Maps)",
@@ -235,10 +235,15 @@
   "admin.desktop.imported": "Importiert.",
 
   "admin.docs.title": "Dokumentenspeicher",
-  "admin.docs.hint": "Generierte Kundendateien (Reisedatei, KML, Web-Karte, CSV) werden hier in Unterordnern gespeichert. Verweisen Sie auf einen Google-Drive-/OneDrive-Ordner, um sie zwischen Geräten zu synchronisieren.",
+  "admin.docs.hint": "Generierte Kundendateien (Empfehlungsliste, KML, Web-Karte, CSV) werden hier in Unterordnern gespeichert. Verweisen Sie auf einen Google-Drive-/OneDrive-Ordner, um sie zwischen Geräten zu synchronisieren.",
   "admin.docs.browse": "Ordner ändern",
   "admin.docs.placeholder": "…/Google Drive/Roxys/Documents",
   "admin.docs.none": "Noch nicht festgelegt — bis Sie einen Ordner wählen, werden Sie bei jeder Datei nach dem Speicherort gefragt.",
   "admin.docs.savedTo": "Gespeichert unter {path}",
-  "admin.docs.downloaded": "Heruntergeladen."
+  "admin.docs.downloaded": "Heruntergeladen.",
+  "admin.gen.branded": "Branding-Seite (HTML)",
+  "admin.texts.disclaimer": "Haftungsausschluss",
+  "settings.disclaimer": "Haftungsausschluss",
+  "disclaimer.kicker": "Bevor Sie beginnen",
+  "disclaimer.accept": "Ich habe gelesen und akzeptiere"
 }

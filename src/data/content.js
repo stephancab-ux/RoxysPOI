@@ -34,3 +34,23 @@ export function pickLang(block, lang) {
   if (!block || typeof block !== 'object') return '';
   return (block[lang] || block.en || '').trim();
 }
+
+/**
+ * Resolve an agency text (welcome/expiry/email/disclaimer) for a language.
+ * Precedence: the imported file's baked-in content → the published content.json
+ * → '' (caller falls back to the i18n default). `dataset` may be null.
+ */
+export function resolveText(field, lang, dataset) {
+  const fromFile = dataset && dataset.content ? pickLang(dataset.content[field], lang) : '';
+  if (fromFile) return fromFile;
+  const c = getContent();
+  return c ? pickLang(c[field], lang) : '';
+}
+
+/** Resolve the contact email (file → content.json → ''). */
+export function resolveEmail(dataset) {
+  const fromFile = dataset && dataset.content && dataset.content.email ? String(dataset.content.email).trim() : '';
+  if (fromFile) return fromFile;
+  const c = getContent();
+  return c && c.email ? String(c.email).trim() : '';
+}

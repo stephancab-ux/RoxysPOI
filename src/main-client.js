@@ -11,9 +11,9 @@ import { BRAND, LANGUAGES } from './config.js';
 import { initTheme, getTheme, setTheme, logoForTheme } from './ui/theme.js';
 import { initI18n, setLang, getLang, t, applyTranslations, onLangChange } from './ui/i18n.js';
 import { el, clear, toast, openDrawer, pickFile } from './ui/components.js';
-import { loadDataset, loadItinerary, clearItinerary } from './data/db.js';
+import { loadDataset, loadItinerary, clearItinerary, getSetting, setSetting } from './data/db.js';
 import { isExpired, categoryName, validateClientFile } from './data/schema.js';
-import { loadContent, getContent, pickLang } from './data/content.js';
+import { loadContent, getContent, pickLang, resolveText, resolveEmail } from './data/content.js';
 import { importClientFile, importItineraryFile } from './data/clientFile.js';
 import { itineraryPoints } from './data/itinerary.js';
 import { createMap, createLocator, fitToPoints } from './map/mapCore.js';
@@ -97,9 +97,8 @@ function importButton(kind) {
 // ---- Expiry lock -------------------------------------------------------------
 function renderLock(dataset) {
   const lang = getLang();
-  const c = getContent();
-  const msg = (c && pickLang(c.expiry, lang)) || t('expiry.body');
-  const email = (c && c.email && c.email.trim()) || t('expiry.contactLine');
+  const msg = resolveText('expiry', lang, dataset) || t('expiry.body');
+  const email = resolveEmail(dataset) || t('expiry.contactLine');
 
   const msgEl = el('p', {});
   msgEl.innerHTML = escapeHtml(msg).replace(/\n/g, '<br>');
@@ -334,6 +333,14 @@ async function openSettings(dataset, itinerary, baseLayers) {
   }
   body.append(itinSection);
 
+  // Disclaimer (re-readable) at the bottom.
+  const disclaimer = resolveText('disclaimer', getLang(), dataset);
+  if (disclaimer) {
+    const box = el('div', { class: 'disclaimer__scroll', style: { marginTop: '.5rem' } });
+    box.innerHTML = paragraphsHtml(disclaimer);
+    body.append(el('div', { class: 'section' }, [el('h3', { 'data-i18n': 'settings.disclaimer' }), box]));
+  }
+
   const ctrl = openDrawer({ title: t('settings.title'), body });
   applyTranslations(ctrl.drawer);
 }
@@ -358,17 +365,54 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// ---- Disclaimer gate ---------------------------------------------------------
+// A token that changes whenever a new/updated file is imported, so the traveler
+// re-accepts per imported file.
+const disclaimerToken = (d) => `${d.client || ''}|${d.validFrom || ''}|${d.validUntil || ''}`;
+const paragraphsHtml = (text) => text.split(/\n{2,}/).map((p) => `<p>${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`).join('');
+
+function renderDisclaimer(dataset, itinerary) {
+  const text = resolveText('disclaimer', getLang(), dataset);
+  const scroll = el('div', { class: 'disclaimer__scroll' });
+  scroll.innerHTML = paragraphsHtml(text);
+  const view = el('div', { class: 'lock' }, [
+    el('img', { class: 'lock__logo', src: logoForTheme(), alt: BRAND.name, 'data-logo': true }),
+    el('div', { class: 'disclaimer__kicker', 'data-i18n': 'disclaimer.kicker' }),
+    scroll,
+    el('button', {
+      class: 'btn btn--primary',
+      'data-i18n': 'disclaimer.accept',
+      onclick: async () => {
+        await setSetting('disclaimer.acceptedToken', disclaimerToken(dataset));
+        renderMap(dataset, itinerary);
+      },
+    }),
+  ]);
+  clear(root).append(view);
+  applyTranslations(view);
+}
+
 // ---- Route -------------------------------------------------------------------
-function startMap(dataset, itinerary) {
-  if (dataset && isExpired(dataset.validUntil)) renderLock(dataset);
-  else renderMap(dataset, itinerary);
+async function startMap(dataset, itinerary) {
+  if (dataset && isExpired(dataset.validUntil)) {
+    renderLock(dataset);
+    return;
+  }
+  if (dataset && resolveText('disclaimer', getLang(), dataset)) {
+    const accepted = await getSetting('disclaimer.acceptedToken', '');
+    if (accepted !== disclaimerToken(dataset)) {
+      renderDisclaimer(dataset, itinerary);
+      return;
+    }
+  }
+  renderMap(dataset, itinerary);
 }
 
 /** Load whatever the traveler has imported (places and/or itinerary) and show it. */
 async function showFromStorage() {
   const [dataset, itinerary] = await Promise.all([loadDataset(), loadItinerary()]);
   const hasPlaces = dataset && Array.isArray(dataset.points);
-  if (hasPlaces || itinerary) startMap(hasPlaces ? dataset : null, itinerary || null);
+  if (hasPlaces || itinerary) await startMap(hasPlaces ? dataset : null, itinerary || null);
   else renderWelcome();
 }
 

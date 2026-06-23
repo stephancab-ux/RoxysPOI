@@ -115,6 +115,8 @@ export function validateClientFile(obj) {
     validUntil: obj.validUntil || '',
     categories,
     points,
+    // Baked-in agency texts (welcome/expiry/email/disclaimer) travel with the file.
+    content: obj.content && typeof obj.content === 'object' ? obj.content : null,
   };
   return { ok: true, errors: [], data };
 }

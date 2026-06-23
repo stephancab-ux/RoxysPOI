@@ -191,6 +191,34 @@
   opacity: 0.45;
 }
 
+/* ---- Disclaimer (accept-gate + Settings) ----------------------------------- */
+.disclaimer__kicker {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+.disclaimer__scroll {
+  width: 100%;
+  max-width: 680px;
+  max-height: 55vh;
+  overflow-y: auto;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+.disclaimer__scroll p {
+  margin: 0 0 0.8rem;
+}
+.disclaimer__scroll p:last-child {
+  margin-bottom: 0;
+}
+
 /* Small offline banner shown when no pack covers the current view. */
 .map-banner {
   position: absolute;

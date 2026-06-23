@@ -7,20 +7,21 @@
 import { el, mount, toast } from '../ui/components.js';
 import { t } from '../ui/i18n.js';
 import { LANGUAGES } from '../config.js';
-import { persistMaster } from '../data/master.js';
+import { persistMaster, DEFAULT_DISCLAIMER } from '../data/master.js';
 import { saveOutput } from './saveOutput.js';
 
 export function renderTextsPanel(container, { master }) {
   if (!master.content) {
-    master.content = { welcome: { en: '', fr: '', de: '' }, expiry: { en: '', fr: '', de: '' }, email: 'info@roxystravelplan.com' };
+    master.content = { welcome: { en: '', fr: '', de: '' }, expiry: { en: '', fr: '', de: '' }, email: 'info@roxystravelplan.com', disclaimer: { ...DEFAULT_DISCLAIMER } };
   }
   const c = master.content;
+  if (!c.disclaimer) c.disclaimer = { ...DEFAULT_DISCLAIMER };
 
   // A block of three textareas (EN/FR/DE) bound to a {en,fr,de} object.
-  const langBlock = (titleKey, obj) => {
+  const langBlock = (titleKey, obj, rows = 3) => {
     const section = el('div', { class: 'section' }, [el('h3', { text: t(titleKey) })]);
     LANGUAGES.forEach((l) => {
-      const ta = el('textarea', { rows: 3 });
+      const ta = el('textarea', { rows });
       ta.value = obj[l.code] || '';
       ta.addEventListener('input', () => {
         obj[l.code] = ta.value;
@@ -51,6 +52,7 @@ export function renderTextsPanel(container, { master }) {
     langBlock('admin.texts.welcome', c.welcome),
     langBlock('admin.texts.expiry', c.expiry),
     el('div', { class: 'section' }, [el('h3', { text: t('admin.texts.email') }), el('div', { class: 'field' }, [emailInput])]),
+    langBlock('admin.texts.disclaimer', c.disclaimer, 12),
     el('div', { class: 'toolbar' }, [saveBtn, exportBtn]),
   ]);
   mount(container, panel);

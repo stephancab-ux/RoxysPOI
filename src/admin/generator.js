@@ -6,12 +6,32 @@
 
 import { el, mount, toast, openModal } from '../ui/components.js';
 import { t } from '../ui/i18n.js';
-import { CLIENT_APP_URL } from '../config.js';
+import { CLIENT_APP_URL, BASE_URL } from '../config.js';
 import { hasCoords, countriesOf } from '../data/schema.js';
 import { bufferedBbox, formatBbox } from '../geo/bbox.js';
 import { packFileName } from '../offline/packs.js';
-import { buildStandaloneHtml, buildIframeEmbed, buildKml } from './exporters.js';
+import { buildStandaloneHtml, buildIframeEmbed, buildKml, buildBrandedHtml } from './exporters.js';
 import { saveOutput } from './saveOutput.js';
+
+// Fetch the brand logo once and return it as a base64 data URI so the branded
+// HTML export stays fully self-contained (works offline, no external request).
+let _logoPromise;
+function logoDataUri() {
+  return (_logoPromise ||= (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}assets/logo-black.png`);
+      const blob = await res.blob();
+      return await new Promise((resolve) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = () => resolve('');
+        r.readAsDataURL(blob);
+      });
+    } catch {
+      return '';
+    }
+  })());
+}
 
 export function renderGenerator(container, { master }) {
   const allCountries = countriesOf(master.pois);
@@ -76,14 +96,15 @@ export function renderGenerator(container, { master }) {
     const points = selectedPoints();
     const usedCats = new Set(points.map((p) => p.categoryId));
     const categories = master.categories.filter((c) => usedCats.has(c.id));
-    return { client: sel.client.trim(), validFrom: sel.from, validUntil: sel.until, categories, points };
+    // Bake the current agency texts (welcome/expiry/email/disclaimer) into the file.
+    return { client: sel.client.trim(), validFrom: sel.from, validUntil: sel.until, categories, points, content: master.content || null };
   }
   const slug = () => sel.client.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
 
   function downloadJson() {
     const f = buildFile();
     if (!f) return;
-    saveOutput('Client files', `${slug()}-roxys-travel.json`, JSON.stringify(f, null, 2), 'application/json');
+    saveOutput('Recommendation lists', `${slug()}-recommendation-list.json`, JSON.stringify(f, null, 2), 'application/json');
   }
   function downloadHtmlEmbed() {
     const f = buildFile();
@@ -100,6 +121,12 @@ export function renderGenerator(container, { master }) {
     const f = buildFile();
     if (!f) return;
     saveOutput('KML', `${slug()}-roxys.kml`, buildKml(f), 'application/vnd.google-earth.kml+xml');
+  }
+  async function downloadBrandedHtml() {
+    const f = buildFile();
+    if (!f) return;
+    const html = buildBrandedHtml(f, { logoDataUri: await logoDataUri() });
+    saveOutput('Recommendation pages', `${slug()}-recommendation.html`, html, 'text/html');
   }
 
   // Modal with copy-to-clipboard (and optional file download) for embed code.
@@ -144,6 +171,7 @@ export function renderGenerator(container, { master }) {
       el('div', { class: 'section' }, [el('p', {}, [summaryEl])]),
       el('div', { class: 'toolbar' }, [
         el('button', { class: 'btn btn--primary', text: t('admin.gen.generate'), onclick: downloadJson }),
+        el('button', { class: 'btn', text: t('admin.gen.branded'), onclick: downloadBrandedHtml }),
         el('button', { class: 'btn', text: t('admin.gen.html'), onclick: downloadHtmlEmbed }),
         el('button', { class: 'btn', text: t('admin.gen.iframe'), onclick: copyIframeEmbed }),
         el('button', { class: 'btn', text: t('admin.gen.kml'), onclick: downloadKmlFile }),
