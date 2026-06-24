@@ -9,8 +9,8 @@ import L from 'leaflet';
 import Papa from 'papaparse';
 import { el, mount, openModal, confirmDialog, toast } from '../ui/components.js';
 import { saveOutput } from './saveOutput.js';
-import { t } from '../ui/i18n.js';
-import { genId, hasCoords, countriesOf } from '../data/schema.js';
+import { t, getLang } from '../ui/i18n.js';
+import { genId, hasCoords, countriesOf, countryName } from '../data/schema.js';
 import { persistMaster } from '../data/master.js';
 import { createOnlineLayer } from '../map/baseLayers.js';
 import { createClusterGroup } from '../map/clusters.js';
@@ -37,7 +37,7 @@ export function renderPoiTable(container, { master, onChange }) {
         return c ? el('span', { class: 'badge', style: { background: c.color } }, [`${c.emoji} ${c.name}`]) : '—';
       },
     },
-    { key: 'country', defaultWidth: 140, cellFn: (p) => p.country || '—' },
+    { key: 'country', defaultWidth: 140, cellFn: (p) => countryName(p.country, getLang()) || '—' },
     {
       key: 'coords',
       defaultWidth: 150,
@@ -441,7 +441,7 @@ export function renderPoiTable(container, { master, onChange }) {
     ]);
     const countrySel = el('select', { onchange: (e) => ((state.country = e.target.value), render()) }, [
       el('option', { value: '' }, [t('admin.pois.filterCountry')]),
-      ...countriesOf(master.pois).map((c) => el('option', { value: c, selected: c === state.country ? '' : null }, [c])),
+      ...countriesOf(master.pois, getLang()).map((c) => el('option', { value: c, selected: c === state.country ? '' : null }, [countryName(c, getLang())])),
     ]);
     const searchInput = el('input', {
       type: 'search',

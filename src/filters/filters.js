@@ -4,7 +4,7 @@
 // category is enabled AND its country is enabled.
 // =============================================================================
 
-import { countriesOf, categoryName } from '../data/schema.js';
+import { countriesOf, categoryName, countryName } from '../data/schema.js';
 import { el } from '../ui/components.js';
 import { t, getLang } from '../ui/i18n.js';
 
@@ -136,8 +136,14 @@ export function createFilters(dataset) {
       const countryChecks = el('div', {});
       const renderCountryChecks = () => {
         allLabel.querySelector('input').checked = allCountriesSelected();
+        // Re-sort + relabel by the current language each time the panel builds,
+        // so reopening it after a language switch shows localized country names.
+        // The checkbox `country` stays the English key, so filtering is unchanged.
+        const ordered = [...allCountries].sort((a, b) =>
+          countryName(a, getLang()).localeCompare(countryName(b, getLang()))
+        );
         countryChecks.replaceChildren(
-          ...allCountries.map((country) =>
+          ...ordered.map((country) =>
             el('label', { class: 'check' }, [
               el('input', {
                 type: 'checkbox',
@@ -148,7 +154,7 @@ export function createFilters(dataset) {
                   emit();
                 },
               }),
-              el('span', { text: country }),
+              el('span', { text: countryName(country, getLang()) }),
             ])
           )
         );

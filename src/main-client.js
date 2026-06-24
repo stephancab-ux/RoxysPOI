@@ -12,7 +12,7 @@ import { initTheme, getTheme, setTheme, logoForTheme } from './ui/theme.js';
 import { initI18n, setLang, getLang, t, applyTranslations, onLangChange } from './ui/i18n.js';
 import { el, clear, toast, openDrawer, pickFile } from './ui/components.js';
 import { loadDataset, loadItinerary, getSetting, setSetting } from './data/db.js';
-import { isExpired, categoryName, validateClientFile } from './data/schema.js';
+import { isExpired, categoryName, countryName, validateClientFile } from './data/schema.js';
 import { loadContent, getContent, pickLang, resolveText, resolveEmail } from './data/content.js';
 import { importTravelFile } from './data/clientFile.js';
 import { itineraryPoints, validateItinerary } from './data/itinerary.js';
@@ -227,7 +227,7 @@ function renderMap(dataset, itinerary) {
           results.append(
             el('button', { onclick: () => goToPoint(p) }, [
               el('div', { text: `${cat ? cat.emoji + ' ' : ''}${p.name}` }),
-              p.country && el('div', { class: 'muted', text: p.country }),
+              p.country && el('div', { class: 'muted', text: countryName(p.country, getLang()) }),
             ])
           );
         }

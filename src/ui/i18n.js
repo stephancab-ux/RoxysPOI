@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { BASE_URL, DEFAULT_LANGUAGE, LANGUAGES } from '../config.js';
+import { setCountryNames } from '../data/schema.js';
 
 const KEY = 'roxys.lang';
 const cache = new Map(); // lang -> dict
@@ -68,6 +69,20 @@ export async function setLang(lang) {
   listeners.forEach((fn) => fn(lang));
 }
 
+// Country names live in a single bundled table carrying every language, so we
+// load it once (not per setLang). On failure countryName() falls back to EN.
+let countriesLoaded = false;
+async function loadCountryNames() {
+  if (countriesLoaded) return;
+  try {
+    const res = await fetch(`${BASE_URL}i18n/countries.json`);
+    if (res.ok) setCountryNames(await res.json());
+  } catch {
+    /* non-fatal: country names stay in English */
+  }
+  countriesLoaded = true;
+}
+
 export async function initI18n() {
-  await setLang(storedLang());
+  await Promise.all([setLang(storedLang()), loadCountryNames()]);
 }

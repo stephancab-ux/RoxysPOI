@@ -68,6 +68,28 @@ export function categoryName(cat, lang = 'en') {
   return (cat.names && (cat.names[lang] || cat.names.en)) || cat.name || '';
 }
 
+// Country display-name table (English NE name -> { fr, de }), installed once at
+// startup from public/i18n/countries.json. Empty until then, so countryName()
+// simply falls back to the English name and every call site stays safe.
+let countryNames = {};
+
+/** Install the EN->{fr,de} country table (called once after it is fetched). */
+export function setCountryNames(table) {
+  countryNames = table || {};
+}
+
+/**
+ * A country's display name in the given language. POIs always store the
+ * canonical English Natural Earth name; this translates it for display only,
+ * falling back to the English string when there is no entry (or before the
+ * table has loaded). EN passes through unchanged.
+ */
+export function countryName(name, lang = 'en') {
+  if (!name) return '';
+  const tr = countryNames[name];
+  return (tr && tr[lang]) || name;
+}
+
 /** Coerce loose input into a clean POI. Returns null if unusable (no name). */
 export function normalizePOI(p) {
   const name = String(p.name ?? '').trim();
@@ -136,9 +158,13 @@ export function isExpired(validUntil, now = new Date()) {
   return now.getTime() > end;
 }
 
-/** Distinct, sorted country list from a set of POIs. */
-export function countriesOf(points) {
+/**
+ * Distinct country list from a set of POIs. Values are always the canonical
+ * English names; pass `lang` to sort by the localized display name (the EN
+ * default reproduces the plain English sort).
+ */
+export function countriesOf(points, lang = 'en') {
   return [...new Set(points.map((p) => p.country).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b)
+    countryName(a, lang).localeCompare(countryName(b, lang))
   );
 }

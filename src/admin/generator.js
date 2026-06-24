@@ -5,9 +5,9 @@
 // =============================================================================
 
 import { el, mount, toast, openModal, pickFile } from '../ui/components.js';
-import { t } from '../ui/i18n.js';
+import { t, getLang } from '../ui/i18n.js';
 import { CLIENT_APP_URL, BASE_URL } from '../config.js';
-import { hasCoords, countriesOf } from '../data/schema.js';
+import { hasCoords, countriesOf, countryName } from '../data/schema.js';
 import { validateItinerary } from '../data/itinerary.js';
 import { bufferedBbox, formatBbox } from '../geo/bbox.js';
 import { packFileName } from '../offline/packs.js';
@@ -35,7 +35,7 @@ function logoDataUri() {
 }
 
 export function renderGenerator(container, { master }) {
-  const allCountries = countriesOf(master.pois);
+  const allCountries = countriesOf(master.pois, getLang());
   // `itineraryRaw` = the raw CRM JSON (baked into the file as-is); `itinerary` =
   // its normalized form (for the on-screen summary). Optional — a list-only file
   // is still valid.
@@ -203,7 +203,7 @@ export function renderGenerator(container, { master }) {
       el('p', { class: 'panel__hint', text: t('admin.gen.hint') }),
       el('div', { class: 'field' }, [el('label', { text: t('admin.gen.client') }), clientInput]),
       el('div', { class: 'grid2' }, [
-        el('div', { class: 'section' }, [el('h3', { text: t('admin.gen.countries') }), checklist(allCountries.map((c) => ({ value: c })), sel.countries, (it) => it.value, updateSummary)]),
+        el('div', { class: 'section' }, [el('h3', { text: t('admin.gen.countries') }), checklist(allCountries.map((c) => ({ value: c })), sel.countries, (it) => countryName(it.value, getLang()), updateSummary)]),
         el('div', { class: 'section' }, [el('h3', { text: t('admin.gen.categories') }), checklist(master.categories.map((c) => ({ value: c.id, c })), sel.cats, (it) => `${it.c.emoji} ${it.c.name}`, updateSummary)]),
         itinSection,
       ]),
