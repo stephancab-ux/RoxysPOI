@@ -83,11 +83,26 @@ if(D.itin){(function(IT){
   window.__itinPts=ipts;
 })(D.itin);}`;
 
+// Floating "Travel Guide" button for the self-contained HTML exports. Reads
+// `D.guide` ({dataUri}|{url}); an embedded PDF is decoded to a Blob URL so it
+// opens offline. No-op when there is no guide.
+const GUIDE_JS = `
+if(D.guide&&(D.guide.dataUri||D.guide.url)){(function(G){
+  var b=document.createElement('button');
+  b.textContent='📕 Travel Guide';
+  b.style.cssText='position:fixed;top:12px;right:12px;z-index:1000;background:#B8902F;color:#fff;border:0;border-radius:8px;padding:10px 14px;font:600 14px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer';
+  b.onclick=function(){
+    if(G.url){window.open(G.url,'_blank','noopener');return;}
+    fetch(G.dataUri).then(function(r){return r.blob();}).then(function(bl){var u=URL.createObjectURL(bl);window.open(u,'_blank','noopener');setTimeout(function(){URL.revokeObjectURL(u);},60000);});
+  };
+  document.body.appendChild(b);
+})(D.guide);}`;
+
 // ---- Standalone HTML (self-contained map) -----------------------------------
 export function buildStandaloneHtml(file) {
   const cats = {};
   for (const c of file.categories || []) cats[c.id] = { name: c.name, emoji: c.emoji, color: c.color };
-  const data = { cats, points: (file.points || []).filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number'), itin: itineraryOf(file) };
+  const data = { cats, points: (file.points || []).filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number'), itin: itineraryOf(file), guide: file.guide || null };
   // Escape "<" so a note containing "</script>" can't break out of the inline data.
   const json = JSON.stringify(data).replace(/</g, '\\u003c');
   const title = xml(file.client || 'Roxys Travel Plan');
@@ -124,6 +139,7 @@ map.addLayer(cluster);
 ${ITIN_JS}
 var allPts=D.points.map(function(p){return[p.lat,p.lng];}).concat(window.__itinPts||[]);
 if(allPts.length){map.fitBounds(L.latLngBounds(allPts).pad(0.15));}else{map.setView([20,0],2);}
+${GUIDE_JS}
 </script>
 </body></html>`;
 }
@@ -135,7 +151,7 @@ export function buildBrandedHtml(file, { logoDataUri = '' } = {}) {
   const cats = {};
   for (const c of file.categories || []) cats[c.id] = { name: c.name, emoji: c.emoji, color: c.color };
   const points = (file.points || []).filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number');
-  const json = JSON.stringify({ cats, points, itin: itineraryOf(file) }).replace(/</g, '\\u003c');
+  const json = JSON.stringify({ cats, points, itin: itineraryOf(file), guide: file.guide || null }).replace(/</g, '\\u003c');
   const title = xml(file.client || 'Roxys Travel Plan');
   const nCountries = new Set(points.map((p) => p.country).filter(Boolean)).size;
   const nCats = (file.categories || []).length;
@@ -210,13 +226,18 @@ ${ITIN_JS}
 var allPts=D.points.map(function(p){return[p.lat,p.lng];}).concat(window.__itinPts||[]);
 if(allPts.length){map.fitBounds(L.latLngBounds(allPts).pad(0.15));}else{map.setView([20,0],2);}
 setTimeout(function(){map.invalidateSize();},200);
+${GUIDE_JS}
 </script>
 </body></html>`;
 }
 
 // ---- Iframe embed (hosted full app) -----------------------------------------
 export function buildIframeEmbed(file, appUrl) {
-  const src = `${appUrl}#data=${encodeData(file)}`;
+  // A multi-MB embedded PDF would blow past URL-length limits in the #data
+  // fragment, so carry only a link guide here; embedded guides stay in the
+  // downloaded JSON / HTML deliverables.
+  const slim = file.guide && file.guide.url ? file : { ...file, guide: null };
+  const src = `${appUrl}#data=${encodeData(slim)}`;
   return `<iframe src="${src}" width="100%" height="600" style="border:0;border-radius:8px" loading="lazy" title="Roxys Travel Map" allow="geolocation"></iframe>`;
 }
 

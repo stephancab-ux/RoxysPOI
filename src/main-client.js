@@ -179,6 +179,15 @@ function renderMap(dataset, itinerary) {
     fabStack.append(routeBtn);
   }
 
+  // ---- Travel Guide PDF button ----
+  // The guide rides on the dataset (embedded base64 PDF or a hosted link); show a
+  // FAB that opens it in the device's PDF viewer / a new tab.
+  if (dataset && dataset.guide && (dataset.guide.dataUri || dataset.guide.url)) {
+    const guideBtn = el('button', { class: 'fab', title: t('guide.open'), 'aria-label': t('guide.open'), text: '📕' });
+    guideBtn.addEventListener('click', () => openGuide(dataset.guide));
+    fabStack.append(guideBtn);
+  }
+
   // ---- Places layer (clusters + filters + pills + search) ----
   if (hasPlaces) {
     const clusterGroup = createClusterGroup();
@@ -306,6 +315,9 @@ async function openSettings(dataset, itinerary, baseLayers) {
     if (itinerary) {
       planRows.push(el('div', { class: 'row' }, [el('span', { class: 'muted', text: `${t('settings.route')}: ${itinerary.title || '—'} · ${t('settings.stops', { n: (itinerary.stops || []).length })}` })]));
     }
+    if (dataset && dataset.guide && (dataset.guide.dataUri || dataset.guide.url)) {
+      planRows.push(el('button', { class: 'btn btn--ghost', text: `📕 ${t('settings.guide')}`, onclick: () => openGuide(dataset.guide) }));
+    }
     planRows.push(el('button', { class: 'btn btn--ghost', 'data-i18n': 'settings.replacePlan', onclick: () => replaceFile() }));
     body.append(el('div', { class: 'section' }, planRows));
 
@@ -345,6 +357,23 @@ async function replaceFile() {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Open a Travel Guide: a hosted link, or an embedded base64 PDF decoded to a Blob
+// URL so it opens reliably on iOS/Android. fetch() on a data: URI is local (no
+// network), so embedded guides open offline.
+function openGuide(guide) {
+  if (!guide) return;
+  if (guide.url) return void window.open(guide.url, '_blank', 'noopener');
+  if (!guide.dataUri) return;
+  fetch(guide.dataUri)
+    .then((r) => r.blob())
+    .then((blob) => {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    })
+    .catch(() => {});
 }
 
 // ---- Disclaimer gate ---------------------------------------------------------

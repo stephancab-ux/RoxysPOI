@@ -34,12 +34,24 @@ function logoDataUri() {
   })());
 }
 
+// Read a picked file into a base64 data URI (e.g. "data:application/pdf;base64,…").
+// Same FileReader pattern as logoDataUri above — used to embed the Travel Guide
+// PDF into the client file so the deliverable stays self-contained.
+function fileToDataUri(file) {
+  return new Promise((resolve) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => resolve('');
+    r.readAsDataURL(file);
+  });
+}
+
 export function renderGenerator(container, { master }) {
   const allCountries = countriesOf(master.pois, getLang());
   // `itineraryRaw` = the raw CRM JSON (baked into the file as-is); `itinerary` =
   // its normalized form (for the on-screen summary). Optional — a list-only file
   // is still valid.
-  const sel = { client: '', countries: new Set(allCountries), cats: new Set(master.categories.map((c) => c.id)), from: '', until: '', itineraryRaw: null, itinerary: null };
+  const sel = { client: '', countries: new Set(allCountries), cats: new Set(master.categories.map((c) => c.id)), from: '', until: '', itineraryRaw: null, itinerary: null, guide: null };
 
   function selectedPoints() {
     return master.pois.filter((p) => hasCoords(p) && sel.countries.has(p.country) && sel.cats.has(p.categoryId));
@@ -102,7 +114,7 @@ export function renderGenerator(container, { master }) {
     const categories = master.categories.filter((c) => usedCats.has(c.id));
     // Bake the current agency texts (welcome/expiry/email/disclaimer) into the file.
     // `itinerary` carries the raw CRM route (or null) so the client renders both.
-    return { client: sel.client.trim(), validFrom: sel.from, validUntil: sel.until, categories, points, content: master.content || null, itinerary: sel.itineraryRaw || null };
+    return { client: sel.client.trim(), validFrom: sel.from, validUntil: sel.until, categories, points, content: master.content || null, itinerary: sel.itineraryRaw || null, guide: sel.guide || null };
   }
   const slug = () => sel.client.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
 
@@ -157,6 +169,29 @@ export function renderGenerator(container, { master }) {
     render();
   }
 
+  // Travel Guide PDF: embed a ready-made PDF as a base64 data URI, or attach a
+  // link to a hosted PDF. Mirrors the itinerary upload. Only one of the two is
+  // kept on `sel.guide`; the embedded form rides inside the generated file.
+  const GUIDE_MAX_MB = 20;
+  async function uploadGuidePdf() {
+    const file = await pickFile('application/pdf,.pdf');
+    if (!file) return;
+    const dataUri = await fileToDataUri(file);
+    if (!dataUri.startsWith('data:application/pdf')) return toast(t('admin.gen.guideBad'), 'error');
+    if (file.size > GUIDE_MAX_MB * 1024 * 1024) toast(t('admin.gen.guideTooBig'), 'error');
+    sel.guide = { name: file.name, dataUri };
+    render();
+  }
+  // Typed link — update without re-rendering so the input keeps focus.
+  function setGuideUrl(url) {
+    const u = (url || '').trim();
+    sel.guide = u ? { name: u.split('/').pop() || 'guide.pdf', url: u } : null;
+  }
+  function removeGuide() {
+    sel.guide = null;
+    render();
+  }
+
   // Modal with copy-to-clipboard (and optional file download) for embed code.
   function showEmbed(title, code, downloadName, mime, subfolder) {
     const ta = el('textarea', { rows: 7, readonly: '', style: { width: '100%', fontFamily: 'monospace', fontSize: '.78rem' } });
@@ -198,6 +233,22 @@ export function renderGenerator(container, { master }) {
           ]),
     ]);
 
+    // Travel Guide PDF column — sibling of the itinerary upload. Either embed a
+    // PDF (shows a loaded/remove state) or paste a link in the URL input.
+    const guideSection = el('div', { class: 'section' }, [
+      el('h3', { text: t('admin.gen.guide') }),
+      sel.guide && sel.guide.dataUri
+        ? el('div', { class: 'stack' }, [
+            el('p', { class: 'muted', text: t('admin.gen.guideLoaded', { name: sel.guide.name || '—' }) }),
+            el('button', { class: 'btn btn--sm btn--ghost', text: t('admin.gen.guideRemove'), onclick: removeGuide }),
+          ])
+        : el('div', { class: 'stack' }, [
+            el('p', { class: 'panel__hint', text: t('admin.gen.guideHint') }),
+            el('button', { class: 'btn btn--sm', text: t('admin.gen.guideUpload'), onclick: uploadGuidePdf }),
+            el('input', { type: 'url', placeholder: t('admin.gen.guideUrl'), value: (sel.guide && sel.guide.url) || '', oninput: (e) => setGuideUrl(e.target.value) }),
+          ]),
+    ]);
+
     const panel = el('div', { class: 'panel' }, [
       el('h1', { text: t('admin.gen.title') }),
       el('p', { class: 'panel__hint', text: t('admin.gen.hint') }),
@@ -206,6 +257,7 @@ export function renderGenerator(container, { master }) {
         el('div', { class: 'section' }, [el('h3', { text: t('admin.gen.countries') }), checklist(allCountries.map((c) => ({ value: c })), sel.countries, (it) => countryName(it.value, getLang()), updateSummary)]),
         el('div', { class: 'section' }, [el('h3', { text: t('admin.gen.categories') }), checklist(master.categories.map((c) => ({ value: c.id, c })), sel.cats, (it) => `${it.c.emoji} ${it.c.name}`, updateSummary)]),
         itinSection,
+        guideSection,
       ]),
       el('div', { class: 'grid2' }, [
         el('div', { class: 'field' }, [el('label', { text: t('admin.gen.from') }), from]),

@@ -31,6 +31,7 @@ import { isItineraryShape } from './itinerary.js';
  * @property {string} validUntil  "YYYY-MM-DD" (inclusive; app locks after)
  * @property {Category[]} categories
  * @property {POI[]} points
+ * @property {?{name:string,dataUri?:string,url?:string}} guide  optional Travel Guide: an embedded base64 PDF (`dataUri`) or a hosted link (`url`)
  */
 
 /** Generate a stable unique id (never derived from name — duplicates exist). */
@@ -116,6 +117,20 @@ export function hasCoords(p) {
 }
 
 /**
+ * Coerce an optional Travel Guide into a clean shape, or null. Exactly one of
+ * `dataUri` (an embedded base64 PDF) or `url` (a hosted link) survives; anything
+ * else — missing, wrong type, a non-PDF data URI — drops to null so the viewer
+ * simply shows no guide button.
+ */
+function normalizeGuide(g) {
+  if (!g || typeof g !== 'object') return null;
+  const name = String(g.name ?? '').trim();
+  if (typeof g.dataUri === 'string' && g.dataUri.startsWith('data:application/pdf')) return { name, dataUri: g.dataUri };
+  if (typeof g.url === 'string' && /^https?:\/\//i.test(g.url.trim())) return { name, url: g.url.trim() };
+  return null;
+}
+
+/**
  * Validate & normalise an imported client file.
  * @returns {{ ok: boolean, errors: string[], data: ?ClientFile }}
  */
@@ -144,6 +159,8 @@ export function validateClientFile(obj) {
     // Optional combined-file payload: the raw CRM itinerary, re-validated on use
     // by validateItinerary() so the route renders alongside the recommendation list.
     itinerary: obj.itinerary && isItineraryShape(obj.itinerary) ? obj.itinerary : null,
+    // Optional Travel Guide PDF (embedded base64 data URI) or a hosted link.
+    guide: normalizeGuide(obj.guide),
   };
   return { ok: true, errors: [], data };
 }
