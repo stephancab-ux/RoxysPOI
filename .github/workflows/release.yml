@@ -26,11 +26,11 @@ jobs:
             args: ''
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Node 22: on Windows the build also packs the AI-agent helper
       # (roxys-agent.exe, see agent/build-exe.mjs), which embeds this Node version.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
