@@ -83,7 +83,8 @@ whether to **Save & close**, **Close without saving**, or **Cancel**.
 
 When you generate a client file (travel JSON), a KML, a website map, or export a
 CSV, the desktop app saves it into your **Documents folder** under a tidy
-subfolder (`Client files/`, `KML/`, `Website embeds/`, `CSV exports/`).
+subfolder (`Recommendation lists/`, `Recommendation pages/`, `Website embeds/`,
+`KML/`, `CSV exports/`).
 
 - Set it once in **Master data → Document storage → Change folder**. Point it at
   a Google Drive / OneDrive folder to keep generated files synced too.

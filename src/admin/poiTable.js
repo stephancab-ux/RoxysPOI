@@ -6,9 +6,9 @@
 // =============================================================================
 
 import L from 'leaflet';
-import Papa from 'papaparse';
 import { el, mount, openModal, confirmDialog, toast } from '../ui/components.js';
 import { saveOutput } from './saveOutput.js';
+import { buildPointsCsv } from '../csv/exportCsv.js';
 import { t, getLang } from '../ui/i18n.js';
 import { genId, hasCoords, countriesOf, countryName } from '../data/schema.js';
 import { persistMaster } from '../data/master.js';
@@ -119,19 +119,7 @@ export function renderPoiTable(container, { master, onChange }) {
 
   // ---- Export CSV ------------------------------------------------------------
   function exportCsv() {
-    const map = catById();
-    const rows = sorted(filtered()).map((p) => ({
-      Title: p.name,
-      Note: p.note || '',
-      URL: p.googleUrl || '',
-      Latitude: p.lat ?? '',
-      Longitude: p.lng ?? '',
-      Country: p.country || '',
-      Category: map.get(p.categoryId)?.name || '',
-      placeId: p.placeId || '',
-    }));
-    // Prepend a UTF-8 BOM so Excel opens accented / non-Latin names correctly.
-    saveOutput('CSV exports', 'roxys-points.csv', '﻿' + Papa.unparse(rows), 'text/csv;charset=utf-8');
+    saveOutput('CSV exports', 'roxys-points.csv', buildPointsCsv(sorted(filtered()), master.categories), 'text/csv;charset=utf-8');
   }
 
   // ---- Edit / add form -------------------------------------------------------

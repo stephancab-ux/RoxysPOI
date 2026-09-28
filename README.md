@@ -89,6 +89,17 @@ Native file reads/writes are done by small Rust commands in
 
 ---
 
+## AI agent access (Atlas)
+
+The Windows desktop app ships a helper, `roxys-agent.exe`, so a local AI agent
+(e.g. the owner's **Atlas**) can **answer questions about the master list** and
+**make client files** over MCP or the command line. It only reads the list and
+only creates new files. Roxys Admin → **Master data → Connect an AI agent** shows
+the exact settings to paste into the agent. See
+[docs/atlas-agent.md](docs/atlas-agent.md). Code: `agent/`; tests: `npm test`.
+
+---
+
 ## Deploy to GitHub Pages
 
 A workflow is included at `.github/workflows/deploy.yml`. One-time setup:

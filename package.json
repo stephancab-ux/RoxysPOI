@@ -4,16 +4,23 @@
   "description": "Roxys Travel Plan — offline-capable travel-map PWA (client viewer + admin).",
   "type": "module",
   "private": true,
+  "bin": {
+    "roxys-agent": "agent/cli.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "dev:desktop": "vite --mode desktop --port 5174 --strictPort",
     "build:desktop": "vite build --mode desktop",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "agent": "node agent/cli.js",
+    "build:agent-exe": "node agent/build-exe.mjs",
+    "test": "node --test agent/test/core.test.js agent/test/mcp.test.js"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "^0.1.3",
+    "@modelcontextprotocol/sdk": "^1.30.1",
     "@protomaps/basemaps": "^5.7.0",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
@@ -25,10 +32,13 @@
     "maplibre-gl": "^5.24.0",
     "papaparse": "^5.5.3",
     "pmtiles": "^4.3.0",
-    "protomaps-leaflet": "^5.0.1"
+    "protomaps-leaflet": "^5.0.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
+    "esbuild": "^0.27.7",
+    "postject": "^1.0.0-alpha.6",
     "vite": "^7.1.0",
     "vite-plugin-pwa": "^1.0.0"
   }

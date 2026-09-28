@@ -16,7 +16,7 @@ import { el, clear, mount, toast, confirmDialog, pickFile } from './ui/component
 import { isAuthed, setAuthed, logout, checkLogin } from './admin/auth.js';
 import {
   loadMasterData, exportMaster, persistMaster, fetchSeed,
-  normalizeMaster, normalizeContent, seedMaster, markSaved, isDirty, onDirtyChange,
+  normalizeMaster, withDefaultContent, seedMaster, markSaved, isDirty, onDirtyChange,
 } from './data/master.js';
 import { normalizeCategory, normalizePOI } from './data/schema.js';
 import { renderPoiTable } from './admin/poiTable.js';
@@ -24,6 +24,7 @@ import { renderCategoryEditor } from './admin/categoryEditor.js';
 import { renderGenerator } from './admin/generator.js';
 import { renderImportPanel } from './admin/importPanel.js';
 import { renderTextsPanel } from './admin/textsPanel.js';
+import { agentSection } from './admin/agentPanel.js';
 import { upsertPois, mergeCategories } from './data/merge.js';
 
 const root = document.getElementById('admin-app');
@@ -207,7 +208,7 @@ async function desktopReload() {
   if (!masterPath) return;
   if (isDirty() && !(await confirmDialog(t('admin.desktop.reloadConfirm'), { danger: true }))) return;
   try {
-    master = withContent(normalizeMaster(await ds.readMasterFile(masterPath)));
+    master = withDefaultContent(normalizeMaster(await ds.readMasterFile(masterPath)));
     lastSavedAt = await ds.getLastSavedAt();
     markSaved();
     renderApp();
@@ -222,7 +223,7 @@ async function desktopOpen() {
   const path = await ds.pickOpenLocation();
   if (!path) return;
   try {
-    master = withContent(normalizeMaster(await ds.readMasterFile(path)));
+    master = withDefaultContent(normalizeMaster(await ds.readMasterFile(path)));
     masterPath = path;
     await ds.setMasterPath(path);
     lastSavedAt = await ds.getLastSavedAt();
@@ -289,8 +290,6 @@ async function pickDocumentsFolder() {
   await ds.setDocumentsFolder(path);
   if (currentTab === 'data') renderTab();
 }
-
-const withContent = (m) => (m.content ? m : ((m.content = normalizeContent({})), m));
 
 // First-run screen: no file bound yet → open an existing list or start a new one.
 function renderFirstRun() {
@@ -460,6 +459,9 @@ function renderDesktopDataPanel(container) {
       el('div', { class: 'row' }, [docsInput, el('button', { class: 'btn btn--sm', text: t('admin.docs.browse'), onclick: pickDocumentsFolder })]),
       documentsFolder ? null : el('p', { class: 'muted', text: t('admin.docs.none') }),
     ].filter(Boolean)),
+
+    // Connect an AI agent (the bundled roxys-agent.exe helper).
+    agentSection({ documentsFolder, fileExists: ds.fileExists }),
   ]);
   mount(container, panel);
 }
@@ -481,7 +483,7 @@ async function bootDesktop() {
   backupFolder = await ds.getBackupFolder();
   if (masterPath && (await ds.fileExists(masterPath).catch(() => false))) {
     try {
-      master = withContent(normalizeMaster(await ds.readMasterFile(masterPath)));
+      master = withDefaultContent(normalizeMaster(await ds.readMasterFile(masterPath)));
       renderApp();
       return;
     } catch {

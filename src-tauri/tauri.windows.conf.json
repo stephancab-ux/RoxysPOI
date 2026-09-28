@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "build": {
+    "beforeDevCommand": "npm run build:agent-exe && npm run dev:desktop",
+    "beforeBuildCommand": "npm run build:desktop && npm run build:agent-exe"
+  },
+  "bundle": {
+    "resources": {
+      "../agent-dist/roxys-agent.exe": "roxys-agent.exe"
+    }
+  }
+}

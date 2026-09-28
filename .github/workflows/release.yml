@@ -28,9 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Node 22: on Windows the build also packs the AI-agent helper
+      # (roxys-agent.exe, see agent/build-exe.mjs), which embeds this Node version.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install Rust toolchain

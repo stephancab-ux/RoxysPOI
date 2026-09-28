@@ -274,5 +274,14 @@
   "admin.texts.disclaimer": "Disclaimer",
   "settings.disclaimer": "Disclaimer",
   "disclaimer.kicker": "Before you begin",
-  "disclaimer.accept": "I have read and accept"
+  "disclaimer.accept": "I have read and accept",
+
+  "admin.agent.title": "Connect an AI agent",
+  "admin.agent.hint": "Let your own AI agent (for example Atlas) look up places and make client files. It runs on this computer, only reads your list and only creates new files — it never changes or deletes your places.",
+  "admin.agent.mcp": "MCP settings (most agent apps) — add this to the agent's list of MCP servers:",
+  "admin.agent.python": "Python — if you write your agent's tools in Python, use this helper:",
+  "admin.agent.test": "Test — paste this into PowerShell; it should print a summary of your list:",
+  "admin.agent.docsMissing": "Set a Documents folder above first: without it the agent can answer questions but can't save client files.",
+  "admin.agent.notFound": "The agent helper isn't included in this version of Roxys Admin (it ships with the Windows app). See docs/atlas-agent.md in the Roxys project.",
+  "admin.agent.guide": "Full guide: docs/atlas-agent.md in the Roxys project."
 }

@@ -274,5 +274,14 @@
   "admin.texts.disclaimer": "Haftungsausschluss",
   "settings.disclaimer": "Haftungsausschluss",
   "disclaimer.kicker": "Bevor Sie beginnen",
-  "disclaimer.accept": "Ich habe gelesen und akzeptiere"
+  "disclaimer.accept": "Ich habe gelesen und akzeptiere",
+
+  "admin.agent.title": "KI-Agent verbinden",
+  "admin.agent.hint": "Lassen Sie Ihren eigenen KI-Agenten (zum Beispiel Atlas) Orte nachschlagen und Kundendateien erstellen. Er läuft auf diesem Computer, liest Ihre Liste nur und erstellt nur neue Dateien — er ändert oder löscht nie Ihre Orte.",
+  "admin.agent.mcp": "MCP-Einstellungen (die meisten Agenten-Apps) — fügen Sie dies zur MCP-Serverliste des Agenten hinzu:",
+  "admin.agent.python": "Python — wenn Sie die Werkzeuge Ihres Agenten in Python schreiben, verwenden Sie diese Funktion:",
+  "admin.agent.test": "Test — fügen Sie dies in PowerShell ein; es sollte eine Übersicht Ihrer Liste anzeigen:",
+  "admin.agent.docsMissing": "Legen Sie zuerst oben einen Dokumentenordner fest: ohne ihn kann der Agent Fragen beantworten, aber keine Kundendateien speichern.",
+  "admin.agent.notFound": "Das Agenten-Hilfsprogramm ist in dieser Version von Roxys Admin nicht enthalten (es wird mit der Windows-App geliefert). Siehe docs/atlas-agent.md im Roxys-Projekt.",
+  "admin.agent.guide": "Vollständige Anleitung: docs/atlas-agent.md im Roxys-Projekt."
 }

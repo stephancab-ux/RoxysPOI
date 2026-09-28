@@ -7,7 +7,8 @@
 import { el, mount, toast, openModal, pickFile } from '../ui/components.js';
 import { t, getLang } from '../ui/i18n.js';
 import { CLIENT_APP_URL, BASE_URL } from '../config.js';
-import { hasCoords, countriesOf, countryName } from '../data/schema.js';
+import { countriesOf, countryName } from '../data/schema.js';
+import { buildClientFile, selectClientPoints, clientSlug, DELIVERABLES } from '../data/clientBuild.js';
 import { validateItinerary } from '../data/itinerary.js';
 import { bufferedBbox, formatBbox } from '../geo/bbox.js';
 import { packFileName } from '../offline/packs.js';
@@ -54,7 +55,7 @@ export function renderGenerator(container, { master }) {
   const sel = { client: '', countries: new Set(allCountries), cats: new Set(master.categories.map((c) => c.id)), from: '', until: '', itineraryRaw: null, itinerary: null, guide: null };
 
   function selectedPoints() {
-    return master.pois.filter((p) => hasCoords(p) && sel.countries.has(p.country) && sel.cats.has(p.categoryId));
+    return selectClientPoints(master, { countries: sel.countries, categoryIds: sel.cats });
   }
 
   function checklist(items, selectedSet, labelFn, onToggle) {
@@ -106,27 +107,26 @@ export function renderGenerator(container, { master }) {
 
   /** Validate the selection and assemble the scoped client file (or null). */
   function buildFile() {
-    if (!sel.client.trim()) return toast(t('admin.gen.needClient'), 'error'), null;
-    if (!sel.from || !sel.until) return toast(t('admin.gen.needDates'), 'error'), null;
-    if (sel.countries.size === 0 || sel.cats.size === 0) return toast(t('admin.gen.needSelection'), 'error'), null;
-    const points = selectedPoints();
-    const usedCats = new Set(points.map((p) => p.categoryId));
-    const categories = master.categories.filter((c) => usedCats.has(c.id));
-    // Bake the current agency texts (welcome/expiry/email/disclaimer) into the file.
-    // `itinerary` carries the raw CRM route (or null) so the client renders both.
-    return { client: sel.client.trim(), validFrom: sel.from, validUntil: sel.until, categories, points, content: master.content || null, itinerary: sel.itineraryRaw || null, guide: sel.guide || null };
+    const r = buildClientFile(master, {
+      client: sel.client, validFrom: sel.from, validUntil: sel.until,
+      countries: sel.countries, categoryIds: sel.cats, itinerary: sel.itineraryRaw, guide: sel.guide,
+    });
+    if (!r.ok) return toast(t(`admin.gen.${r.error}`), 'error'), null;
+    return r.file;
   }
-  const slug = () => sel.client.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
+  const slug = () => clientSlug(sel.client);
+  const out = (kind) => [DELIVERABLES[kind].subfolder, `${slug()}${DELIVERABLES[kind].suffix}`];
 
   function downloadJson() {
     const f = buildFile();
     if (!f) return;
-    saveOutput('Recommendation lists', `${slug()}-recommendation-list.json`, JSON.stringify(f, null, 2), 'application/json');
+    saveOutput(...out('list'), JSON.stringify(f, null, 2), DELIVERABLES.list.mime);
   }
   function downloadHtmlEmbed() {
     const f = buildFile();
     if (!f) return;
-    showEmbed(t('admin.gen.htmlTitle'), buildStandaloneHtml(f), `${slug()}-map.html`, 'text/html', 'Website embeds');
+    const [subfolder, filename] = out('map');
+    showEmbed(t('admin.gen.htmlTitle'), buildStandaloneHtml(f), filename, DELIVERABLES.map.mime, subfolder);
   }
   function copyIframeEmbed() {
     const f = buildFile();
@@ -137,13 +137,13 @@ export function renderGenerator(container, { master }) {
   function downloadKmlFile() {
     const f = buildFile();
     if (!f) return;
-    saveOutput('KML', `${slug()}-roxys.kml`, buildKml(f), 'application/vnd.google-earth.kml+xml');
+    saveOutput(...out('kml'), buildKml(f), DELIVERABLES.kml.mime);
   }
   async function downloadBrandedHtml() {
     const f = buildFile();
     if (!f) return;
     const html = buildBrandedHtml(f, { logoDataUri: await logoDataUri() });
-    saveOutput('Recommendation pages', `${slug()}-recommendation.html`, html, 'text/html');
+    saveOutput(...out('page'), html, DELIVERABLES.page.mime);
   }
 
   // Upload the CRM itinerary JSON to bundle alongside the recommendation list.

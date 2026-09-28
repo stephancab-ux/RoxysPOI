@@ -274,5 +274,14 @@
   "admin.texts.disclaimer": "Avertissement",
   "settings.disclaimer": "Avertissement",
   "disclaimer.kicker": "Avant de commencer",
-  "disclaimer.accept": "J'ai lu et j'accepte"
+  "disclaimer.accept": "J'ai lu et j'accepte",
+
+  "admin.agent.title": "Connecter un agent IA",
+  "admin.agent.hint": "Permettez à votre propre agent IA (par exemple Atlas) de consulter les lieux et de créer des fichiers clients. Il fonctionne sur cet ordinateur, lit seulement votre liste et crée uniquement de nouveaux fichiers — il ne modifie ni ne supprime jamais vos lieux.",
+  "admin.agent.mcp": "Réglages MCP (la plupart des applications d'agents) — ajoutez ceci à la liste des serveurs MCP de l'agent :",
+  "admin.agent.python": "Python — si vous écrivez les outils de votre agent en Python, utilisez cette fonction :",
+  "admin.agent.test": "Test — collez ceci dans PowerShell ; un résumé de votre liste doit s'afficher :",
+  "admin.agent.docsMissing": "Choisissez d'abord un dossier Documents ci-dessus : sans lui, l'agent peut répondre aux questions mais ne peut pas enregistrer de fichiers clients.",
+  "admin.agent.notFound": "L'assistant pour agent n'est pas inclus dans cette version de Roxys Admin (il est fourni avec l'application Windows). Voir docs/atlas-agent.md dans le projet Roxys.",
+  "admin.agent.guide": "Guide complet : docs/atlas-agent.md dans le projet Roxys."
 }

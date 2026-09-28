@@ -1,0 +1,16 @@
+{
+  "categories": [
+    { "id": "cat-beach", "name": "Beach", "names": { "en": "Beach", "fr": "Plage", "de": "Strand" }, "emoji": "🏖️", "color": "#2A9D8F" },
+    { "id": "cat-food", "name": "Food", "names": { "en": "Food", "fr": "Restaurant", "de": "Essen" }, "emoji": "🍜", "color": "#E76F51" },
+    { "id": "cat-hikes", "name": "Hikes", "names": { "en": "Hikes", "fr": "Randonnées", "de": "Wanderungen" }, "emoji": "🥾", "color": "#588157" }
+  ],
+  "pois": [
+    { "id": "poi-1", "name": "Padang Padang Beach", "note": "Small cove, go early.", "googleUrl": "https://maps.google.com/?cid=1", "lat": -8.8111, "lng": 115.1036, "categoryId": "cat-beach", "country": "Indonesia", "placeId": "0x1:0x1" },
+    { "id": "poi-2", "name": "Warung Babi Guling", "note": "Famous suckling pig.", "googleUrl": "https://maps.google.com/?cid=2", "lat": -8.5069, "lng": 115.2625, "categoryId": "cat-food", "country": "Indonesia", "placeId": "" },
+    { "id": "poi-3", "name": "Mount Batur Sunrise", "note": "Start at 3am.", "googleUrl": "", "lat": -8.2422, "lng": 115.3750, "categoryId": "cat-hikes", "country": "Indonesia", "placeId": "" },
+    { "id": "poi-4", "name": "Railay Beach", "note": null, "googleUrl": "https://maps.google.com/?cid=4", "lat": 8.0110, "lng": 98.8390, "categoryId": "cat-beach", "country": "Thailand", "placeId": "" },
+    { "id": "poi-5", "name": "Jay Fai", "note": "Crab omelette. Book ahead.", "googleUrl": "https://maps.google.com/?cid=5", "lat": 13.7527, "lng": 100.5048, "categoryId": "cat-food", "country": "Thailand", "placeId": "" },
+    { "id": "poi-6", "name": "Secret Beach (no position)", "note": "Ask the hotel.", "googleUrl": "", "lat": null, "lng": null, "categoryId": "cat-beach", "country": "Indonesia", "placeId": "" },
+    { "id": "poi-7", "name": "Old Night Market", "note": "Category was deleted.", "googleUrl": "", "lat": 13.75, "lng": 100.5, "categoryId": "cat-gone", "country": "Thailand", "placeId": "" }
+  ]
+}
